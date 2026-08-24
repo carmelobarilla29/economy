@@ -263,6 +263,11 @@ function oPaid(o){return num(o.total);}                    /* tutto compreso fin
 function oShip2(o){return o.ship2paid?num(o.ship2):0;}     /* spedizione per l'Italia */
 function oCost(o){return oPaid(o)+oShip2(o);}
 function oOpen(o){return !o.ship2paid;}
+function oState(o){
+  if(!o.ship2paid)return {k:"pagare",t:"spedizione da pagare",c:"wait"};
+  if(!o.arrived)return {k:"transito",t:"in transito",c:""};
+  return {k:"arrivato",t:"arrivato",c:"ok"};
+}
 function unitCost(o,it){var p=oPieces(o);return p?oCost(o)/p:0;}
 function soldQty(oid,iid){return S.sales.reduce(function(t,s){return (s.oid===oid&&s.iid===iid)?t+s.qty:t;},0);}
 function leftQty(o,it){return Math.max(0,it.qty-soldQty(o.id,it.id));}
@@ -315,7 +320,7 @@ function catBreakdown(m){
   return Object.keys(map).map(function(k){return {k:k,v:map[k]};}).sort(function(a,b){return b.v-a.v;});
 }
 function liquid(){return balance("contanti")+balance("conto");}      /* i soldi che hai davvero */
-function netWorth(){return liquid()+stockValue()-debtLeft();}        /* quadro completo */
+function netWorth(){return liquid()-debtLeft();}   /* i soldi dell'ordine sono gia una spesa */
 function profitMonth(){
   return S.sales.reduce(function(t,s){return monthOf(s.date)===curMonth()?t+saleProfit(s):t;},0);
 }
@@ -361,13 +366,10 @@ function vHome(){
      '<div class="chips">'+
       chip("Contanti",balance("contanti"))+chip("Conto",balance("conto"))+
      '</div>'+
-     ((stockValue()>0||debtLeft()>0)?
+     (debtLeft()>0?
       '<div class="tile-s" style="margin-top:13px;padding-top:12px;border-top:1px solid var(--line)">'+
-       'Fuori dal conto qui sopra: '+
-       (stockValue()>0?'<b>'+eur(stockValue())+'</b> fermi in magazzino':'')+
-       (stockValue()>0&&debtLeft()>0?' e ':'')+
-       (debtLeft()>0?'<b class="neg">'+eur(debtLeft())+'</b> di debiti':'')+
-       '. Tutto insieme fa '+eur(netWorth())+'.</div>':'')+
+       'Hai ancora <b class="neg">'+eur(debtLeft())+'</b> di debiti da pagare: tolti quelli restano '+
+       '<b>'+eur(netWorth())+'</b>.</div>':'')+
      '</div>';
 
   var nuovi=records()-num(S.bk);
@@ -483,7 +485,11 @@ function vBiz(){
   var allProfit=S.sales.reduce(function(t,s){return t+saleProfit(s);},0);
   h+='<div class="net" style="border-radius:var(--r)"><div class="lab">Profitto totale</div>'+
      '<div class="big '+(allProfit>=0?"pos":"neg")+'" style="font-size:36px">'+eur(allProfit,true)+'</div>'+
-     '<div class="chips">'+chip("Questo mese",pm)+chip("Magazzino",stockValue())+'</div></div>';
+     '<div class="chips">'+chip("Questo mese",pm)+
+      '<div class="chip"><span>Da rientrare</span><b>'+eur(stockValue())+'</b></div>'+
+      '</div>'+
+     '<div class="tile-s" style="margin-top:11px">I soldi degli ordini sono già usciti e contano come spesa. '+
+     '«Da rientrare» è quanto ti costano i pezzi che hai ancora da vendere.</div></div>';
 
   h+='<div class="sec"><div class="sec-h"><h2>Ordini</h2>'+
      '<button class="link" data-sheet="order">+ Nuovo ordine</button></div>';
@@ -493,7 +499,7 @@ function vBiz(){
     var pct=cost>0?Math.min(100,rev/cost*100):0;
     h+='<div class="card" data-order="'+o.id+'" style="cursor:pointer">'+
       '<div class="tile-top"><b style="font-family:var(--ff-d);font-size:15.5px">'+esc(o.name)+'</b>'+
-      (oOpen(o)?'<span class="pill wait">spedizione da pagare</span>':'<span class="pill ok">arrivato</span>')+'</div>'+
+      '<span class="pill '+oState(o).c+'">'+oState(o).t+'</span></div>'+
       '<div class="tile-s" style="margin-top:4px">'+dmy(o.date)+' · '+p+' pezzi · '+eur(cost)+
         ' ('+eur(p?cost/p:0)+' a pezzo'+(oOpen(o)?', provvisorio':'')+')</div>'+
       '<div class="bar"><i class="'+(pct>=100?"done":"")+'" style="width:'+pct.toFixed(0)+'%"></i></div>'+
@@ -797,8 +803,11 @@ function sheetOrderDetail(id){
   var o=find(S.orders,id);if(!o)return;
   var cost=oCost(o),rev=oRevenue(o.id),prof=S.sales.filter(function(s){return s.oid===o.id;})
     .reduce(function(t,s){return t+saleProfit(s);},0);
-  var h='<h3>'+esc(o.name)+'</h3><p class="hint">'+dmy(o.date)+' · '+oPieces(o)+' pezzi'+
-    (oOpen(o)?' · <span class="acc">spedizione per l\'Italia non ancora pagata</span>':'')+'</p>';
+  var st=oState(o);
+  var h='<h3>'+esc(o.name)+'</h3><p class="hint">'+dmy(o.date)+' · '+oPieces(o)+' pezzi · '+
+    (st.k==="pagare"?'<span class="acc">spedizione per l\'Italia non ancora pagata</span>':
+     st.k==="transito"?'<span class="acc">pacco in viaggio</span>':
+     'arrivato'+(o.arrivedDate?' il '+dmy(o.arrivedDate):''))+'</p>';
   h+='<div class="card"><div class="kv"><span>Pagato al fornitore</span><b>'+eur(oPaid(o))+'</b></div>'+
      '<div class="kv"><span>Spedizione per l\'Italia</span><b>'+(o.ship2paid?eur(num(o.ship2)):"—")+'</b></div>'+
      '<div class="kv"><span>Costo totale</span><b>'+eur(cost)+'</b></div>'+
@@ -816,11 +825,19 @@ function sheetOrderDetail(id){
   }).join("")+'</div>';
   if(oOpen(o)){
     h+='<h4 class="sub">Spedizione per l\'Italia</h4><div class="card">'+
-     '<p class="hint" style="margin:0 0 11px">Quando la paghi, ricalcolo il costo reale di ogni pezzo.</p>'+
+     '<p class="hint" style="margin:0 0 11px">Quando la paghi ricalcolo il costo di ogni pezzo e l\'ordine passa <b>in transito</b>.</p>'+
      '<div class="f"><div><label class="fl">Importo</label>'+
      '<input class="fi mono" id="s2_amt" inputmode="decimal" placeholder="0,00"></div>'+
      '<div><label class="fl">Pagato da</label>'+walletSel("s2_w","conto")+'</div>'+
-     '<button class="btn" id="s2_go">Paga e chiudi l\'ordine</button></div></div>';
+     '<button class="btn" id="s2_go">Ho pagato la spedizione</button></div></div>';
+  }
+  if(st.k==="transito"){
+    h+='<h4 class="sub">Il pacco</h4><div class="card">'+
+      '<p class="hint" style="margin:0 0 11px">È partito dal magazzino. Quando ti arriva a casa, segnalo qui.</p>'+
+      '<button class="btn" data-arrived="'+o.id+'">Il pacco è arrivato</button></div>';
+  }else if(st.k==="arrivato"){
+    h+='<div style="margin-top:14px"><button class="btn ghost" data-unarrived="'+o.id+'">'+
+      'Non è ancora arrivato</button></div>';
   }
   h+='<div style="margin-top:16px;display:flex;gap:9px">'+
      '<button class="btn ghost" data-editorder="'+o.id+'">Modifica</button>'+
@@ -830,7 +847,7 @@ function sheetOrderDetail(id){
     var a=num(v("s2_amt"));if(a<=0)return fail("Metti l'importo della spedizione");
     o.ship2=a;o.ship2paid=true;
     post(v("s2_w"),-a,"Spedizione "+o.name,"spedizione","order2:"+o.id,today());
-    save();closeSheet();render();toast("Costi aggiornati");
+    save();closeSheet();render();toast("Pacco in transito, costi aggiornati");
   });
 }
 
@@ -1130,6 +1147,14 @@ document.addEventListener("click",function(e){
   var g=t.closest("[data-go]");if(g)return go(g.getAttribute("data-go"));
   var sh=t.closest("[data-sheet]");if(sh){var f=SHEETS[sh.getAttribute("data-sheet")];if(f)f();return;}
   var adj=t.closest("[data-adj]");if(adj)return sheetAdjust(adj.getAttribute("data-adj"));
+  var ar=t.closest("[data-arrived]");
+  if(ar){var oa=find(S.orders,ar.getAttribute("data-arrived"));
+    if(oa){oa.arrived=true;oa.arrivedDate=today();save();closeSheet();render();toast("Ordine arrivato");}
+    return;}
+  var un=t.closest("[data-unarrived]");
+  if(un){var ou=find(S.orders,un.getAttribute("data-unarrived"));
+    if(ou){ou.arrived=false;ou.arrivedDate="";save();closeSheet();render();toast("Rimesso in transito");}
+    return;}
   var oe=t.closest("[data-editorder]");
   if(oe){var oid2=oe.getAttribute("data-editorder");closeSheet();
     setTimeout(function(){sheetOrderEdit(oid2);},280);return;}
