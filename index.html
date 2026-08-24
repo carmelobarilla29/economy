@@ -1,948 +1,2156 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="CB29 Economy">
-<meta name="theme-color" content="#0D1014">
-<meta name="color-scheme" content="dark">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230D1014'/%3E%3Ctext x='90' y='116' font-family='Helvetica,Arial' font-size='62' font-weight='bold' fill='%23E3A84A' text-anchor='middle'%3ECB%3C/text%3E%3C/svg%3E">
+<title>Pizzeria Bugs Bunny - Gestionale</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+*:focus{outline:none;}
+button:focus{outline:none;}
+input:focus{outline:none;}
+:root{
+  --vs:#1a3a1a;--vm:#2d5a1b;--vc:#4a7c2f;
+  --g:#f5d800;--gs:#c8a800;
+  --r:#cc1a1a;--rs:#8b0000;
+  --mar:#3d2b0a;
+}
+body{font-family:'Nunito',Arial,sans-serif;background:var(--vs);color:#fff;height:100vh;height:100dvh;overflow:hidden;}
+.app{display:grid;grid-template-columns:1fr 400px;grid-template-rows:60px 1fr;height:100vh;height:100dvh;}
+
+/* TABLET/IPAD RESPONSIVE */
+@media (max-width:900px){
+  .app{grid-template-columns:1fr 340px;}
+}
+@media (max-width:768px){
+  .app{grid-template-columns:1fr;grid-template-rows:56px auto 1fr;}
+  .menu-panel{display:none;}
+  .opanel{grid-column:1;border-left:none;}
+}
+
+/* HEADER */
+.header{
+  grid-column:1/-1;
+  background:linear-gradient(135deg,var(--vs) 0%,var(--vm) 50%,var(--vs) 100%);
+  border-bottom:4px solid var(--g);
+  display:flex;align-items:center;justify-content:space-between;padding:0 12px;
+  flex-shrink:0;
+}
+.hbrand{display:flex;align-items:center;gap:8px;}
+.hlogo{font-size:28px;}
+.htitle{font-family:'Fredoka One',cursive;font-size:20px;color:var(--g);text-shadow:2px 2px 0 var(--rs),-1px -1px 0 var(--mar);letter-spacing:1px;}
+.hsub{font-size:9px;color:rgba(245,216,0,0.65);letter-spacing:1px;text-transform:uppercase;}
+.hnav{display:flex;gap:6px;}
+.nbtn{background:rgba(0,0,0,0.3);border:2px solid var(--gs);color:var(--g);padding:7px 14px;border-radius:25px;cursor:pointer;font-size:12px;font-weight:900;transition:all 0.2s;white-space:nowrap;}
+.nbtn.active,.nbtn:hover{background:var(--g);color:var(--vs);border-color:var(--g);}
+.clock{font-family:'Fredoka One',cursive;font-size:20px;color:var(--g);}
+
+/* MENU */
+.menu-panel{background:var(--vs);overflow-y:auto;padding:12px;}
+.cat-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.ctab{background:rgba(0,0,0,0.4);border:2px solid var(--vc);color:#ccc;padding:8px 16px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:900;transition:all 0.15s;}
+.ctab.active,.ctab:hover{background:var(--r);color:var(--g);border-color:var(--g);}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.pbtn{background:linear-gradient(145deg,rgba(45,90,27,0.8),rgba(26,58,26,0.9));border:2px solid var(--vc);color:#fff;padding:12px 8px;border-radius:12px;cursor:pointer;text-align:center;transition:all 0.15s;}
+.pbtn:hover{border-color:var(--g);transform:scale(1.03);}
+.pbtn:active{transform:scale(0.97);}
+.pn{font-size:12px;font-weight:900;line-height:1.3;}
+.pp{font-size:15px;color:var(--g);margin-top:5px;font-weight:900;font-family:'Fredoka One',cursive;}
+
+/* ORDER PANEL */
+.opanel{background:#0d1f0d;border-left:3px solid var(--g);display:flex;flex-direction:column;overflow:hidden;height:100%;}
+.ohdr{background:linear-gradient(135deg,var(--rs),var(--r));border-bottom:3px solid var(--g);padding:7px 12px;flex-shrink:0;}
+.ohdr h2{font-size:12px;color:var(--g);font-family:'Fredoka One',cursive;margin-bottom:5px;letter-spacing:1px;}
+.typrow{display:flex;gap:8px;}
+.tbtn{flex:1;padding:9px;border:2px solid rgba(245,216,0,0.4);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.65);border-radius:10px;cursor:pointer;font-size:13px;font-weight:900;transition:all 0.15s;}
+.tbtn.active{background:var(--g);color:var(--rs);border-color:var(--g);}
+
+/* CUSTOMER INFO */
+.cinfo{padding:5px 12px;border-bottom:1px solid rgba(245,216,0,0.12);flex-shrink:0;}
+.finput{width:100%;background:rgba(0,0,0,0.4);border:1.5px solid rgba(245,216,0,0.25);color:#fff;padding:7px 10px;border-radius:8px;font-size:13px;margin-bottom:4px;font-family:'Nunito',sans-serif;transition:border-color 0.15s;}
+.finput:focus{outline:none;border-color:var(--g);}
+.finput::placeholder{color:rgba(255,255,255,0.3);}
+
+/* ORARIO BUTTONS */
+.orario-row{display:flex;gap:6px;margin-bottom:4px;}
+.orbtn{
+  flex:1;padding:8px 6px;border:2px solid rgba(245,216,0,0.3);
+  background:rgba(0,0,0,0.35);color:rgba(255,255,255,0.6);
+  border-radius:10px;cursor:pointer;font-size:13px;font-weight:900;
+  transition:all 0.15s;line-height:1.2;text-align:center;min-height:40px;
+}
+.orbtn.active{background:var(--g);color:var(--vs);border-color:var(--g);}
+.orbtn:hover:not(.active){border-color:var(--gs);color:var(--g);}
+
+/* SUGGESTIONS */
+.sugbox{background:#0a1a0a;border:1.5px solid var(--gs);border-radius:8px;margin-bottom:4px;max-height:90px;overflow-y:auto;display:none;}
+.sugitem{padding:8px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px;transition:background 0.1s;}
+.sugitem:hover{background:rgba(245,216,0,0.1);}
+.sugitem strong{color:var(--g);}
+
+/* ORDER ITEMS */
+.oitems{flex:1;overflow-y:auto;padding:5px 12px;min-height:0;}
+.oitem{display:flex;align-items:center;background:rgba(45,90,27,0.25);border:1px solid rgba(74,124,47,0.35);border-radius:8px;padding:5px 8px;margin-bottom:4px;gap:6px;}
+.iname{flex:1;font-size:12px;line-height:1.3;font-weight:700;}
+.inote-p{font-size:11px;color:var(--g);}
+.inote-m{font-size:11px;color:#ff7070;}
+.inote-t{font-size:11px;color:rgba(255,255,255,0.45);}
+.qrow{display:flex;align-items:center;gap:5px;}
+.qbtn{background:var(--r);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1;font-weight:bold;transition:background 0.15s;}
+.qbtn:hover{background:var(--rs);}
+.qnum{font-weight:900;min-width:20px;text-align:center;font-size:15px;}
+.iprice{font-weight:900;color:var(--g);font-size:14px;min-width:48px;text-align:right;font-family:'Fredoka One',cursive;}
+.idel{background:none;border:none;color:rgba(255,100,100,0.55);cursor:pointer;font-size:16px;padding:0 3px;transition:color 0.15s;}
+.idel:hover{color:#ff4444;}
+
+/* FOOTER */
+.ofooter{padding:6px 12px;border-top:2px solid var(--g);background:rgba(0,0,0,0.28);flex-shrink:0;}
+.delrow{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.65);margin-bottom:2px;}
+.totbox{display:flex;justify-content:space-between;align-items:center;background:rgba(245,216,0,0.1);border:2px solid var(--g);border-radius:8px;padding:5px 12px;margin-bottom:5px;}
+.totlbl{font-size:13px;font-weight:900;color:var(--g);}
+.totval{font-size:20px;font-weight:900;color:var(--g);font-family:'Fredoka One',cursive;}
+.fbtns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px;}
+.bconf{background:linear-gradient(135deg,#1a7a1a,#27ae60);border:2px solid #2ecc71;color:#fff;padding:16px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:900;transition:all 0.15s;min-height:40px;}
+.bconf:hover{transform:scale(1.02);}
+.bpay{background:linear-gradient(135deg,#b8860b,#f39c12);border:2px solid var(--g);color:#000;padding:16px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:900;transition:all 0.15s;min-height:40px;}
+.bpay:hover{transform:scale(1.02);}
+.bclr{background:rgba(150,50,50,0.35);border:1px solid rgba(255,100,100,0.3);color:rgba(255,255,255,0.7);padding:8px;border-radius:8px;cursor:pointer;font-size:12px;width:100%;transition:all 0.15s;}
+.bclr:hover{background:rgba(200,50,50,0.5);color:#fff;}
+
+/* OPEN ORDERS */
+.oview{grid-column:1/-1;overflow-y:auto;padding:12px 16px;}
+.ogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;margin-top:8px;}
+.ocard{background:linear-gradient(145deg,rgba(45,90,27,0.6),rgba(26,58,26,0.8));border-radius:12px;padding:12px;border:2px solid var(--vc);transition:all 0.15s;}
+.ocard.domicilio{border-color:var(--r);background:linear-gradient(145deg,rgba(80,20,20,0.5),rgba(50,10,10,0.7));}
+.ocard.asporto{border-color:var(--gs);}
+.ocard:hover{transform:translateY(-1px);}
+.ocname{font-size:18px;font-weight:900;color:var(--g);}
+.octype{font-size:11px;padding:3px 9px;border-radius:12px;font-weight:900;}
+.octype.domicilio{background:var(--r);color:var(--g);}
+.octype.asporto{background:var(--g);color:var(--vs);}
+.ocitems{font-size:12px;color:rgba(255,255,255,0.7);margin:6px 0;line-height:1.7;}
+.octot{font-size:22px;font-weight:900;color:var(--g);font-family:'Fredoka One',cursive;}
+.octime{font-size:11px;color:rgba(255,255,255,0.35);}
+/* Nuovi tasti ordini */
+.ocacts{display:flex;gap:6px;margin-top:8px;align-items:center;}
+.ocico{width:36px;height:36px;border:none;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
+.ocico:hover{transform:scale(1.1);}
+.ocico.edit{background:rgba(15,52,96,0.9);border:2px solid #3498db;}
+.ocico.print{background:rgba(90,27,90,0.9);border:2px solid #9b59b6;}
+.ocico.cancel{background:rgba(80,20,20,0.7);border:1px solid rgba(200,50,50,0.4);}
+.ocbtn-pay{flex:1;padding:10px;background:linear-gradient(135deg,#b8860b,#f39c12);border:2px solid var(--g);color:#000;border-radius:8px;cursor:pointer;font-size:14px;font-weight:900;transition:all 0.15s;}
+.ocbtn-pay:hover{transform:scale(1.02);}
+
+/* Sezioni asporto/domicilio */
+.osection-title{font-family:'Fredoka One',cursive;font-size:18px;padding:6px 12px;border-radius:8px;margin-bottom:6px;display:inline-block;}
+.osection-title.asporto{background:rgba(200,168,0,0.2);color:var(--g);border:1px solid var(--gs);}
+.osection-title.domicilio{background:rgba(150,20,20,0.3);color:#ff9999;border:1px solid var(--r);}
+
+/* MODALS */
+.moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100;align-items:center;justify-content:center;}
+.moverlay.show{display:flex;}
+.modal{background:linear-gradient(145deg,#1a3a1a,#0d1f0d);border-radius:18px;padding:22px;width:430px;max-width:95vw;border:3px solid var(--g);}
+.modal h3{font-family:'Fredoka One',cursive;font-size:20px;margin-bottom:14px;color:var(--g);text-align:center;}
+.minput{width:100%;background:rgba(0,0,0,0.5);border:1.5px solid rgba(245,216,0,0.3);color:#fff;padding:10px 12px;border-radius:10px;font-size:14px;margin-bottom:10px;font-family:'Nunito',sans-serif;}
+.minput:focus{outline:none;border-color:var(--g);}
+.minput::placeholder{color:rgba(255,255,255,0.3);}
+.mnote{font-size:12px;color:rgba(245,216,0,0.7);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+.elist{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;max-height:180px;overflow-y:auto;}
+.ebtn{background:rgba(15,52,96,0.6);border:2px solid rgba(52,152,219,0.3);color:#fff;padding:7px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;transition:all 0.15s;}
+.ebtn.sel{border-color:#27ae60;background:rgba(39,174,96,0.2);color:#2ecc71;}
+.rlist{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.rbtn{background:rgba(96,15,15,0.6);border:2px solid rgba(231,76,60,0.3);color:#fff;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;transition:all 0.15s;}
+.rbtn.sel{border-color:#e74c3c;background:rgba(231,76,60,0.25);color:#ff7070;}
+.mbtns{display:flex;gap:10px;margin-top:10px;}
+.mbtns button{flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:900;font-family:'Nunito',sans-serif;transition:all 0.15s;}
+.mbtns button:hover{transform:scale(1.02);}
+.bok{background:linear-gradient(135deg,#1a7a1a,#27ae60);color:#fff;}
+.bcan{background:rgba(100,100,100,0.45);color:#fff;}
+
+/* PAY MODAL */
+.paytot{font-family:'Fredoka One',cursive;font-size:38px;color:var(--g);text-align:center;margin:8px 0;}
+.payrow{display:flex;gap:10px;align-items:center;margin-bottom:10px;}
+.payrow label{font-size:13px;color:rgba(255,255,255,0.65);white-space:nowrap;font-weight:700;}
+.payrow input{flex:1;background:rgba(0,0,0,0.5);border:2px solid var(--g);color:#fff;padding:10px;border-radius:10px;font-size:22px;font-weight:900;text-align:right;font-family:'Fredoka One',cursive;}
+.payrow input:focus{outline:none;}
+.restobox{background:linear-gradient(135deg,#1a5c1a,#27ae60);border-radius:12px;padding:14px;text-align:center;margin-bottom:12px;}
+.rl{font-size:13px;color:rgba(255,255,255,0.8);font-weight:700;}
+.rv{font-family:'Fredoka One',cursive;font-size:38px;color:#fff;}
+
+/* ADMIN */
+.admin-tab{background:rgba(0,0,0,0.3);border:2px solid rgba(200,100,200,0.3);color:rgba(255,255,255,0.6);padding:8px 16px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:900;transition:all 0.15s;}
+.admin-tab.active{background:rgba(150,50,150,0.5);border-color:#d9a0d9;color:#fff;}
+.admin-cat{font-family:'Fredoka One',cursive;font-size:16px;color:var(--r);margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid rgba(204,26,26,0.3);}
+.admin-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06);}
+.admin-item-name{font-size:13px;font-weight:700;flex:1;}
+.admin-price-input{background:rgba(0,0,0,0.4);border:1.5px solid rgba(245,216,0,0.3);color:var(--g);padding:5px 8px;border-radius:6px;font-size:14px;font-weight:900;width:80px;text-align:right;font-family:'Fredoka One',cursive;}
+.admin-price-input:focus{outline:none;border-color:var(--g);}
+#toasts{position:fixed;top:78px;right:18px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:12px;font-size:14px;font-weight:900;min-width:270px;pointer-events:all;animation:tin 0.3s ease;}
+.toast.ok{background:linear-gradient(135deg,#1a5c1a,#27ae60);border:2px solid #2ecc71;color:#fff;}
+.toast.err{background:linear-gradient(135deg,var(--rs),var(--r));border:2px solid #ff6b6b;color:#fff;}
+.toast.hide{animation:tout 0.3s ease forwards;}
+@keyframes tin{from{opacity:0;transform:translateX(80px);}to{opacity:1;transform:translateX(0);}}
+@keyframes tout{from{opacity:1;}to{opacity:0;transform:translateX(80px);}}
+
+/* EMPTY */
+.empty{text-align:center;padding:40px;color:rgba(255,255,255,0.25);}
+.empty .big{font-size:50px;margin-bottom:10px;}
+.empty p{font-size:14px;font-weight:700;}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-thumb{background:var(--vc);border-radius:3px;}
+</style>
 </head>
 <body>
-<title>CB29 Economy</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<style>
-:root{
-  --bg:#0D1014; --bg-2:#12161C; --surf:#171C23; --surf-2:#1D232B;
-  --line:#262D37; --line-2:#333C48;
-  --tx:#E8EBF0; --tx-2:#9AA3B2; --tx-3:#6B7484;
-  --acc:#E3A84A; --acc-dim:#4A3A1C;
-  --pos:#46C98B; --neg:#F2705E; --play:#C77DFF;
-  --r:14px; --r-sm:10px;
-  --ff-d:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
-  --ff-b:"Instrument Sans",ui-sans-serif,system-ui,sans-serif;
-  --ff-m:"IBM Plex Mono",ui-monospace,monospace;
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--ff-b);font-size:15px;line-height:1.45;
-  -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
-button,input,select,textarea{font:inherit;color:inherit}
-.mono{font-family:var(--ff-m);font-variant-numeric:tabular-nums}
+<div class="app">
 
-#app{max-width:460px;margin:0 auto;padding:0 16px 108px;min-height:100vh}
+  <!-- HEADER -->
+  <div class="header">
+    <div class="hbrand">
+      <div class="hlogo">🐰</div>
+      <div>
+        <div class="htitle">BUGS BUNNY</div>
+        <div class="hsub">Pizzeria · Rosticceria · Gallico RC</div>
+      </div>
+    </div>
+    <div class="hnav">
+      <button class="nbtn active" onclick="switchView('new')">➕ Nuovo Ordine</button>
+      <button class="nbtn" onclick="switchView('open')" id="btn-open">Ordini Aperti <span id="ocount"></span></button>
+      <button class="nbtn" onclick="switchView('comp')" id="btn-comp">✅ Completati <span id="ccount"></span></button>
+      <button class="nbtn" onclick="switchView('stats')">📊 Statistiche</button>
+      <button class="nbtn" onclick="openAdmin()" style="background:rgba(150,50,150,0.3);border-color:rgba(200,100,200,0.5);color:#d9a0d9;">⚙️ Admin</button>
+    </div>
+    <div class="clock" id="clock">--:--</div>
+    <button onclick="connectBluetooth()" id="bt-status"
+      style="background:rgba(0,0,0,0.3);border:1.5px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.5);padding:6px 12px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:900;white-space:nowrap;">
+      🖨️ Non connessa
+    </button>
+  </div>
 
-/* ---------- header ---------- */
-.hdr{padding:22px 0 8px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.hdr-l{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--tx-3);font-weight:600}
-.hdr h1{font-family:var(--ff-d);font-size:19px;font-weight:800;margin:2px 0 0;letter-spacing:-.01em}
-.icon-btn{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--surf);
-  display:grid;place-items:center;cursor:pointer;flex:none}
-.icon-btn:active{background:var(--surf-2)}
+  <!-- MENU PANEL -->
+  <div class="menu-panel" id="mpanel">
+    <div class="cat-tabs" id="ctabs"></div>
+    <div class="pgrid" id="pgrid"></div>
+  </div>
 
-/* ---------- net ---------- */
-.net{background:linear-gradient(158deg,var(--surf) 0%,var(--bg-2) 100%);border:1px solid var(--line);
-  border-radius:20px;padding:20px;margin-top:6px}
-.net .lab{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--tx-3);font-weight:600}
-.net .big{font-family:var(--ff-d);font-size:44px;font-weight:800;letter-spacing:-.03em;line-height:1.05;margin-top:6px;
-  font-variant-numeric:tabular-nums}
-.net .sub{font-size:12.5px;color:var(--tx-2);margin-top:6px}
-.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
-.chip{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 11px}
-.chip b{display:block;font-family:var(--ff-m);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px}
-.chip span{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--tx-3);font-weight:600}
+  <!-- ORDER PANEL -->
+  <div class="opanel" id="opanel">
+    <div class="ohdr">
+      <h2>🍕 ORDINE CORRENTE</h2>
+      <div class="typrow">
+        <button class="tbtn active" onclick="setType('asporto')" id="ta">🥡 Asporto</button>
+        <button class="tbtn" onclick="setType('domicilio')" id="td">🛵 Domicilio</button>
+        <button onclick="addCoperto()" style="background:rgba(52,152,219,0.25);border:2px solid #3498db;color:#74b9ff;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:900;white-space:nowrap;transition:all 0.15s;" onmouseover="this.style.background='rgba(52,152,219,0.5)'" onmouseout="this.style.background='rgba(52,152,219,0.25)'">🪑 Coperto<br><span style="font-size:11px;">+€2,00</span></button>
+      </div>
+    </div>
 
-/* ---------- generic ---------- */
-.sec{margin-top:22px}
-.sec-h{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:10px}
-.sec-h h2{font-family:var(--ff-d);font-size:14px;font-weight:700;letter-spacing:.02em;margin:0}
-.sec-h .link{font-size:12.5px;color:var(--acc);cursor:pointer;background:none;border:0;padding:0;font-weight:500}
-.card{background:var(--surf);border:1px solid var(--line);border-radius:var(--r);padding:14px}
-.card+.card{margin-top:9px}
-.tile{display:block;width:100%;text-align:left;background:var(--surf);border:1px solid var(--line);
-  border-radius:var(--r);padding:14px;cursor:pointer}
-.tile:active{background:var(--surf-2)}
-.tile-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.tile-t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx-3);font-weight:600}
-.tile-v{font-family:var(--ff-d);font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:5px;
-  font-variant-numeric:tabular-nums}
-.tile-s{font-size:12.5px;color:var(--tx-2);margin-top:3px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.pos{color:var(--pos)} .neg{color:var(--neg)} .acc{color:var(--acc)} .mut{color:var(--tx-2)}
-.pill{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
-  padding:3px 8px;border-radius:99px;border:1px solid var(--line-2);color:var(--tx-2);white-space:nowrap}
-.pill.ok{color:var(--pos);border-color:rgba(70,201,139,.4);background:rgba(70,201,139,.09)}
-.pill.wait{color:var(--acc);border-color:rgba(227,168,74,.4);background:rgba(227,168,74,.09)}
-.pill.off{color:var(--tx-3)}
-.pill.play{color:var(--play);border-color:rgba(199,125,255,.4);background:rgba(199,125,255,.09)}
+    <div class="cinfo">
+      <input class="finput" type="text" id="cognome" placeholder="Cognome cliente *" oninput="onCog(this.value)">
+      <div class="sugbox" id="sugbox"></div>
 
-/* ---------- rows ---------- */
-.row{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer}
-.row:last-child{border-bottom:0}
-.row-i{width:34px;height:34px;border-radius:10px;background:var(--surf-2);display:grid;place-items:center;flex:none;
-  font-family:var(--ff-d);font-size:13px;font-weight:800;color:var(--tx-2)}
-.row-m{flex:1;min-width:0}
-.row-m b{display:block;font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row-m span{font-size:12px;color:var(--tx-3)}
-.row-a{font-family:var(--ff-m);font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
-.empty{padding:26px 14px;text-align:center;color:var(--tx-3);font-size:13.5px;line-height:1.6}
+      <!-- ORARIO -->
+      <div class="orario-row">
+        <button class="orbtn" id="orbtn-ap" onclick="setOr('ap')">⚡ Appena possibile</button>
+        <button class="orbtn" id="orbtn-ora" onclick="setOr('ora')">🕐 Inserisci orario</button>
+      </div>
+      <input class="finput" type="text" id="orario-input" placeholder="Es: 20:30" style="display:none;margin-bottom:5px;">
 
-/* ---------- bars ---------- */
-.bar{height:6px;border-radius:99px;background:var(--surf-2);overflow:hidden;margin-top:10px}
-.bar i{display:block;height:100%;border-radius:99px;background:var(--acc);transition:width .35s ease}
-.bar i.done{background:var(--pos)}
+      <!-- DOMICILIO FIELDS -->
+      <div id="domfields" style="display:none;">
+        <div style="display:flex;gap:5px;margin-bottom:4px;">
+          <input class="finput" type="text" id="telefono" placeholder="📞 Tel *" style="flex:1;margin-bottom:0;">
+          <input class="finput" type="text" id="indirizzo" placeholder="📍 Indirizzo" style="flex:2;margin-bottom:0;">
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:70px;">
+            <button id="del-3" onclick="setDelivery(3)" style="flex:1;padding:4px 6px;background:var(--g);border:2px solid var(--g);color:#000;border-radius:6px;cursor:pointer;font-size:11px;font-weight:900;">🛵 €3</button>
+            <button id="del-5" onclick="setDelivery(5)" style="flex:1;padding:4px 6px;background:rgba(0,0,0,0.3);border:2px solid rgba(245,216,0,0.3);color:rgba(255,255,255,0.6);border-radius:6px;cursor:pointer;font-size:11px;font-weight:900;">🛵 €5</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-/* ---------- tabbar + fab ---------- */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(13,16,20,.93);
-  backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:7px 0 max(9px,env(safe-area-inset-bottom))}
-.tabbar-in{max-width:460px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
-.tab{background:none;border:0;padding:5px 0;display:flex;flex-direction:column;align-items:center;gap:3px;
-  color:var(--tx-3);cursor:pointer;font-size:10px;font-weight:600;letter-spacing:.02em}
-.tab.on{color:var(--acc)}
-.tab svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.fab{position:fixed;z-index:41;right:calc(50% - 230px + 16px);bottom:calc(74px + env(safe-area-inset-bottom));
-  width:54px;height:54px;border-radius:18px;border:0;background:var(--acc);color:#171106;
-  font-size:30px;font-weight:400;line-height:1;display:grid;place-items:center;cursor:pointer;
-  box-shadow:0 10px 26px rgba(0,0,0,.5)}
-.fab:active{transform:scale(.94)}
-@media(max-width:492px){.fab{right:16px}}
+    <div class="oitems" id="oitems">
+      <div class="empty"><div class="big">🍕</div><p>Seleziona prodotti dal menu</p></div>
+    </div>
 
-/* ---------- sheet ---------- */
-.scrim{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.62);opacity:0;pointer-events:none;transition:opacity .2s}
-.scrim.on{opacity:1;pointer-events:auto}
-.sheet{position:fixed;z-index:51;left:0;right:0;bottom:0;max-height:92vh;overflow-y:auto;
-  background:var(--bg-2);border-top:1px solid var(--line-2);border-radius:22px 22px 0 0;
-  transform:translateY(102%);transition:transform .26s cubic-bezier(.32,.72,0,1)}
-.sheet.on{transform:translateY(0)}
-.sheet-in{max-width:460px;margin:0 auto;padding:8px 16px calc(26px + env(safe-area-inset-bottom))}
-.grab{width:38px;height:4px;border-radius:99px;background:var(--line-2);margin:0 auto 14px}
-.sheet h3{font-family:var(--ff-d);font-size:19px;font-weight:800;margin:0 0 3px;letter-spacing:-.01em}
-.sheet .hint{font-size:13px;color:var(--tx-2);margin:0 0 16px}
+    <div class="ofooter">
+      <div class="delrow" id="delrow" style="display:none;"><span>🛵 Consegna</span><span style="color:var(--g)">€ 3,00</span></div>
+      <div class="totbox">
+        <span class="totlbl">TOTALE</span>
+        <span class="totval" id="totval">€ 0,00</span>
+      </div>
+      <div class="fbtns">
+        <button class="bconf" onclick="confirmOrder()">✅ Conferma & Stampa</button>
+        <button class="bpay" onclick="openPay(null)">💰 Paga</button>
+      </div>
+      <button class="bclr" onclick="clearOrder()">🗑️ Azzera ordine corrente</button>
+    </div>
+  </div>
 
-/* ---------- forms ---------- */
-.f{display:flex;flex-direction:column;gap:13px}
-.fl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx-3);font-weight:600;
-  display:block;margin-bottom:6px}
-.fi{width:100%;background:var(--surf);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:12px 13px;font-size:16px;outline:none}
-.fi:focus{border-color:var(--acc)}
-select.fi{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--tx-3) 50%),linear-gradient(135deg,var(--tx-3) 50%,transparent 50%);
-  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat}
-.f2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-.seg{display:flex;gap:6px;background:var(--surf);border:1px solid var(--line);border-radius:var(--r-sm);padding:4px}
-.seg button{flex:1;padding:9px 4px;border:0;background:none;border-radius:7px;font-size:13.5px;font-weight:600;
-  color:var(--tx-2);cursor:pointer}
-.seg button.on{background:var(--surf-2);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.35)}
-.btn{width:100%;padding:15px;border:0;border-radius:13px;background:var(--acc);color:#171106;
-  font-weight:700;font-size:15.5px;cursor:pointer;font-family:var(--ff-d);letter-spacing:.01em}
-.btn:active{opacity:.85}
-.btn.ghost{background:var(--surf);color:var(--tx);border:1px solid var(--line);font-weight:600}
-.btn.danger{background:none;color:var(--neg);border:1px solid rgba(242,112,94,.35)}
-.act{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surf);
-  border:1px solid var(--line);border-radius:var(--r);padding:13px;cursor:pointer;margin-bottom:8px}
-.act:active{background:var(--surf-2)}
-.act i{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;font-style:normal;
-  font-family:var(--ff-d);font-weight:800;font-size:15px}
-.act b{display:block;font-size:14.5px;font-weight:600}
-.act span{font-size:12px;color:var(--tx-3)}
-.err{color:var(--neg);font-size:13px;margin:0}
-.toast{position:fixed;z-index:70;left:50%;transform:translateX(-50%) translateY(20px);bottom:96px;
-  background:var(--surf-2);border:1px solid var(--line-2);color:var(--tx);padding:11px 17px;border-radius:12px;
-  font-size:13.5px;font-weight:500;opacity:0;transition:.25s;pointer-events:none;max-width:90vw;text-align:center}
-.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-.itemrow{display:grid;grid-template-columns:1fr 62px 78px 34px;gap:7px;align-items:center}
-.itemrow .fi{padding:10px;font-size:14.5px}
-.mini{background:none;border:1px solid var(--line);border-radius:9px;color:var(--tx-3);cursor:pointer;
-  height:41px;display:grid;place-items:center;font-size:18px}
-.note{background:rgba(227,168,74,.07);border:1px solid rgba(227,168,74,.25);border-radius:var(--r-sm);
-  padding:11px 13px;font-size:12.5px;color:#EBC48A;line-height:1.5}
-.kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:13.5px;border-bottom:1px solid var(--line)}
-.kv:last-child{border-bottom:0}
-.kv span{color:var(--tx-2)}
-.kv b{font-family:var(--ff-m);font-weight:600;font-variant-numeric:tabular-nums}
-textarea.fi{min-height:130px;font-family:var(--ff-m);font-size:12px;line-height:1.5;resize:vertical}
-h4.sub{font-family:var(--ff-d);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--tx-3);margin:20px 0 9px}
-@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-</style>
+  <!-- OPEN ORDERS VIEW -->
+  <div class="oview" id="oview" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-family:'Fredoka One',cursive;font-size:22px;color:var(--g);">📋 Ordini Aperti</span>
+      <span id="oinfo" style="color:rgba(255,255,255,0.45);font-size:13px;font-weight:700;"></span>
+    </div>
+    <!-- ASPORTO -->
+    <div id="osection-asporto" style="margin-bottom:16px;">
+      <div class="osection-title asporto">🥡 Asporto <span id="ocount-asp" style="font-size:14px;"></span></div>
+      <div class="ogrid" id="ogrid-asp"></div>
+    </div>
+    <!-- DOMICILIO -->
+    <div id="osection-domicilio">
+      <div class="osection-title domicilio">🛵 Domicilio <span id="ocount-dom" style="font-size:14px;"></span></div>
+      <div class="ogrid" id="ogrid-dom"></div>
+    </div>
+  </div>
 
-<div id="app"></div>
-<div class="fab" id="fab" role="button" tabindex="0" aria-label="Aggiungi">+</div>
-<nav class="tabbar"><div class="tabbar-in" id="tabs"></div></nav>
-<div class="scrim" id="scrim"></div>
-<div class="sheet" id="sheet"><div class="sheet-in" id="sheetIn"></div></div>
-<div class="toast" id="toast"></div>
+  <!-- COMPLETED ORDERS VIEW -->
+  <div style="grid-column:1/-1;overflow-y:auto;padding:12px 16px;display:none;" id="cview">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <span style="font-family:'Fredoka One',cursive;font-size:22px;color:var(--g);">✅ Ordini Completati</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="cinfo" style="color:rgba(255,255,255,0.45);font-size:13px;font-weight:700;"></span>
+        <div style="display:flex;gap:6px;">
+          <button onclick="printRiepilogo()" style="background:rgba(0,100,0,0.5);border:1px solid var(--g);color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:900;">🖨️ Stampa riepilogo</button>
+          <button onclick="resetCompleted()" style="background:rgba(200,0,0,0.4);border:1px solid var(--r);color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:900;">🗑️ Azzera serata</button>
+        </div>
+      </div>
+    </div>
+    <div class="ogrid" id="cgrid"></div>
+  </div>
+
+  <!-- STATS VIEW -->
+  <div style="grid-column:1/-1;overflow-y:auto;padding:12px 16px;display:none;" id="sview">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="font-family:'Fredoka One',cursive;font-size:22px;color:var(--g);">📊 Statistiche Serata</span>
+      <span style="color:rgba(255,255,255,0.4);font-size:12px;" id="stats-date"></span>
+    </div>
+    <div id="stats-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toasts"></div>
+
+<!-- MODAL ADMIN -->
+<div class="moverlay" id="madmin">
+  <div class="modal" style="width:600px;max-height:90vh;overflow-y:auto;">
+    <h3>⚙️ Pannello Admin</h3>
+
+    <!-- PASSWORD -->
+    <div id="admin-login" style="">
+      <div class="mnote" style="text-align:center;margin-bottom:12px;">Inserisci la password per accedere</div>
+      <input class="minput" type="password" id="admin-pwd" placeholder="Password admin" onkeydown="if(event.key==='Enter')checkAdminPwd()">
+      <div class="mbtns">
+        <button class="bcan" onclick="closeAdmin()">✕ Annulla</button>
+        <button class="bok" onclick="checkAdminPwd()">🔓 Accedi</button>
+      </div>
+    </div>
+
+    <!-- PANNELLO ADMIN (nascosto finché non si fa login) -->
+    <div id="admin-panel" style="display:none;">
+
+      <!-- TAB ADMIN -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="admin-tab active" onclick="selAdminTab('prezzi',this)">💶 Prezzi Menu</button>
+        <button class="admin-tab" onclick="selAdminTab('consegna',this)">🛵 Consegna</button>
+        <button class="admin-tab" onclick="selAdminTab('pwd',this)">🔑 Password</button>
+      </div>
+
+      <!-- TAB PREZZI -->
+      <div id="atab-prezzi">
+        <div class="mnote" style="margin-bottom:10px;">Modifica prezzi del menu — clicca su un prezzo per cambiarlo</div>
+        <div id="admin-menu-list"></div>
+        <div class="mbtns" style="margin-top:16px;">
+          <button class="bcan" onclick="closeAdmin()">✕ Chiudi</button>
+          <button class="bok" onclick="saveAdminPrezzi()">💾 Salva tutto</button>
+        </div>
+      </div>
+
+      <!-- TAB CONSEGNA -->
+      <div id="atab-consegna" style="display:none;">
+        <div class="mnote" style="margin-bottom:10px;">Costo fisso consegna a domicilio</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <span style="font-size:16px;font-weight:700;">€</span>
+          <input class="minput" type="number" id="admin-delivery" step="0.50" min="0" style="font-size:22px;font-weight:900;width:120px;">
+        </div>
+        <div class="mbtns">
+          <button class="bcan" onclick="closeAdmin()">✕ Chiudi</button>
+          <button class="bok" onclick="saveDelivery()">💾 Salva</button>
+        </div>
+      </div>
+
+      <!-- TAB PASSWORD -->
+      <div id="atab-pwd" style="display:none;">
+        <div class="mnote" style="margin-bottom:10px;">Cambia password admin</div>
+        <input class="minput" type="password" id="admin-newpwd1" placeholder="Nuova password">
+        <input class="minput" type="password" id="admin-newpwd2" placeholder="Ripeti nuova password">
+        <div class="mbtns">
+          <button class="bcan" onclick="closeAdmin()">✕ Chiudi</button>
+          <button class="bok" onclick="saveAdminPwd()">💾 Salva</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MODIFICA ORDINE -->
+<div class="moverlay" id="medit">
+  <div class="modal" style="width:520px;max-height:90vh;display:flex;flex-direction:column;">
+    <h3 id="medit-title">✏️ Modifica Ordine</h3>
+    <!-- TAB modifica/aggiungi -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button onclick="selEditTab('items',this)" id="etab-items" style="flex:1;padding:8px;background:var(--g);color:var(--vs);border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:900;">📋 Prodotti ordine</button>
+      <button onclick="selEditTab('add',this)" id="etab-add" style="flex:1;padding:8px;background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.6);border:2px solid rgba(255,255,255,0.2);border-radius:8px;cursor:pointer;font-size:13px;font-weight:900;">➕ Aggiungi prodotto</button>
+    </div>
+
+    <!-- TAB PRODOTTI ORDINE -->
+    <div id="etab-items-panel" style="flex:1;overflow-y:auto;margin-bottom:10px;">
+      <div id="medit-items"></div>
+    </div>
+
+    <!-- TAB AGGIUNGI -->
+    <div id="etab-add-panel" style="display:none;flex:1;overflow-y:auto;margin-bottom:10px;">
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;" id="edit-cat-tabs"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;" id="edit-prod-grid"></div>
+    </div>
+
+    <div style="background:rgba(245,216,0,0.1);border:2px solid var(--g);border-radius:8px;padding:8px 14px;display:flex;justify-content:space-between;margin-bottom:8px;">
+      <span style="font-size:14px;font-weight:900;color:var(--g);">TOTALE</span>
+      <span style="font-family:'Fredoka One',cursive;font-size:20px;color:var(--g);" id="medit-total">€ 0,00</span>
+    </div>
+    <div class="mbtns">
+      <button class="bcan" onclick="closeEditModal()">✕ Chiudi</button>
+      <button onclick="editPrintComanda()" style="flex:1;padding:12px;background:linear-gradient(135deg,#6a1a8a,#9b59b6);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:14px;font-weight:900;">🖨️ Ristampa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL METÀ/METÀ -->
+<div class="moverlay" id="mmeta">
+  <div class="modal" style="width:680px;max-height:95vh;display:flex;flex-direction:column;">
+    <h3 id="mmeta-title" style="color:#f39c12;">⬡ Metà / Metà</h3>
+    <div style="font-size:10px;color:rgba(255,255,255,0.35);text-align:center;margin-bottom:6px;">Gusto opzionale · Primi 4 extra per metà gratis · Bresaola/Bufala sempre +€3</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1;overflow-y:auto;margin-bottom:8px;">
+      <!-- PRIMA METÀ -->
+      <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:8px;">
+        <div style="font-size:12px;font-weight:900;color:#f39c12;text-align:center;margin-bottom:5px;">🍕 1a METÀ</div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:2px;">GUSTO (opzionale)</div>
+        <div id="mmeta-prima-sel" onclick="toggleGustiGrid('prima')"
+          style="background:rgba(0,0,0,0.3);border:1.5px solid rgba(245,216,0,0.3);border-radius:7px;padding:6px;text-align:center;font-size:11px;font-weight:900;color:rgba(255,255,255,0.4);cursor:pointer;margin-bottom:4px;">
+          Tocca per scegliere gusto...
+        </div>
+        <div id="mmeta-grid-prima-wrap" style="display:none;max-height:120px;overflow-y:auto;margin-bottom:5px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;" id="mmeta-grid-prima"></div>
+        </div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:2px;">EXTRA <span id="mmeta-count-prima" style="color:#f39c12;font-size:10px;"></span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;" id="mmeta-extra-prima"></div>
+      </div>
+      <!-- SECONDA METÀ -->
+      <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:8px;">
+        <div style="font-size:12px;font-weight:900;color:#f39c12;text-align:center;margin-bottom:5px;">🍕 2a METÀ</div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:2px;">GUSTO (opzionale)</div>
+        <div id="mmeta-seconda-sel" onclick="toggleGustiGrid('seconda')"
+          style="background:rgba(0,0,0,0.3);border:1.5px solid rgba(245,216,0,0.3);border-radius:7px;padding:6px;text-align:center;font-size:11px;font-weight:900;color:rgba(255,255,255,0.4);cursor:pointer;margin-bottom:4px;">
+          Tocca per scegliere gusto...
+        </div>
+        <div id="mmeta-grid-seconda-wrap" style="display:none;max-height:120px;overflow-y:auto;margin-bottom:5px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;" id="mmeta-grid-seconda"></div>
+        </div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:2px;">EXTRA <span id="mmeta-count-seconda" style="color:#f39c12;font-size:10px;"></span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;" id="mmeta-extra-seconda"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:6px;">
+      <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:2px;">📝 NOTE</div>
+      <input class="finput" type="text" id="mmeta-note" placeholder="Es: ben cotta..." style="margin-bottom:0;">
+    </div>
+    <div id="mmeta-totrow" style="text-align:center;font-size:14px;font-weight:900;color:var(--g);margin-bottom:8px;"></div>
+    <div class="mbtns">
+      <button class="bcan" onclick="document.getElementById('mmeta').classList.remove('show');window._editMode=false;window._editCartIdx=undefined;">✕ Annulla</button>
+      <button onclick="confirmMetaMeta()" style="flex:1;padding:12px;background:linear-gradient(135deg,#b8860b,#f39c12);border:2px solid var(--g);color:#000;border-radius:10px;cursor:pointer;font-size:14px;font-weight:900;">✅ Aggiungi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EXTRA -->
+<div class="moverlay" id="mex">
+  <div class="modal">
+    <h3 id="mex-title">🍕 Personalizza</h3>
+    <div class="mnote" id="mex-note-label">➕ Ingredienti extra (+€1,00 cad.)</div>
+    <div class="elist" id="mex-extras"></div>
+    <div class="mnote">➖ Ingredienti da togliere</div>
+    <div class="rlist" id="mex-removes"></div>
+    <div class="mnote">📝 Note aggiuntive</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">
+      <button onclick="addNote('Ben cotta')" style="padding:4px 8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">Ben cotta</button>
+      <button onclick="addNote('Stirata')" style="padding:4px 8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">Stirata</button>
+      <button onclick="addNote('Sottile')" style="padding:4px 8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">Sottile</button>
+      <button onclick="addNote('Croccante')" style="padding:4px 8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">Croccante</button>
+      <button onclick="addNote('Piccola')" style="padding:4px 8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">Piccola</button>
+    </div>
+    <input class="minput" type="text" id="mex-note" placeholder="Es: ben cotta, senza sale...">
+    <div class="mbtns">
+      <button class="bcan" onclick="closeEx()">✕ Annulla</button>
+      <button class="bok" onclick="confirmEx()">✅ Aggiungi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PAGAMENTO -->
+<div class="moverlay" id="mpay">
+  <div class="modal">
+    <h3>💰 Pagamento</h3>
+    <div style="text-align:center;font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:4px;" id="pay-info"></div>
+    <div class="paytot" id="pay-tot">€ 0,00</div>
+
+    <!-- SCELTA CONTANTI / CARTA -->
+    <div style="display:flex;gap:10px;margin-bottom:12px;" id="pay-method-row">
+      <button id="pay-cash-btn" onclick="setPayMethod('cash')" style="flex:1;padding:14px;border:2px solid rgba(245,216,0,0.3);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.6);border-radius:10px;cursor:pointer;font-size:16px;font-weight:900;transition:all 0.15s;">
+        💵 Contanti
+      </button>
+      <button id="pay-card-btn" onclick="setPayMethod('card')" style="flex:1;padding:14px;border:2px solid rgba(245,216,0,0.3);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.6);border-radius:10px;cursor:pointer;font-size:16px;font-weight:900;transition:all 0.15s;">
+        💳 Carta
+      </button>
+    </div>
+
+    <!-- SEZIONE CONTANTI -->
+    <div id="pay-cash-section" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;background:rgba(200,50,50,0.15);border:1.5px solid rgba(200,50,50,0.3);border-radius:8px;padding:8px 12px;">
+        <span style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;white-space:nowrap;">🏷️ Sconto €</span>
+        <input type="number" id="pay-sconto" placeholder="0.00" oninput="calcResto()" step="0.50" min="0"
+          style="flex:1;background:transparent;border:none;color:#ff9999;padding:4px;border-radius:6px;font-size:16px;font-weight:900;width:80px;text-align:right;">
+      </div>
+      <div class="payrow">
+        <label>Cliente dà:</label>
+        <input type="number" id="pay-in" placeholder="0.00" oninput="calcResto()" step="0.50" min="0">
+      </div>
+      <div class="restobox">
+        <div class="rl">Resto da dare al cliente</div>
+        <div class="rv" id="resto-val">€ 0,00</div>
+      </div>
+    </div>
+
+    <!-- SEZIONE CARTA -->
+    <div id="pay-card-section" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;background:rgba(200,50,50,0.15);border:1.5px solid rgba(200,50,50,0.3);border-radius:8px;padding:8px 12px;">
+        <span style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:700;white-space:nowrap;">🏷️ Sconto €</span>
+        <input type="number" id="pay-sconto-card" placeholder="0.00" oninput="updateCardTotal()" step="0.50" min="0"
+          style="flex:1;background:transparent;border:none;color:#ff9999;padding:4px;font-size:16px;font-weight:900;width:80px;text-align:right;">
+      </div>
+      <div style="background:linear-gradient(135deg,#1a3a6a,#2980b9);border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;">
+        <div style="font-size:14px;color:rgba(255,255,255,0.8);font-weight:700;">Fai pagare il cliente col POS</div>
+        <div style="font-size:28px;font-weight:900;color:#fff;margin-top:4px;" id="card-amount">€ 0,00</div>
+      </div>
+    </div>
+
+    <div class="mbtns">
+      <button class="bcan" onclick="closePay()">✕ Annulla</button>
+      <button class="bok" onclick="completePay()" id="pay-confirm-btn" style="opacity:0.4;pointer-events:none;">✅ Conferma</button>
+    </div>
+  </div>
+</div>
 
 <script>
-"use strict";
-/* ============================ STATO ============================ */
-var KEY="cb29economy.v1";
-var CATS=["Vestiti","Fornitori cinesi","Casa","Regali","Cura personale","Cibo","Abbonamenti","Altro"];
-var blank={v:1,ledger:[],orders:[],sales:[],promos:[],play:[],debts:[]};
-var S=load();
+const MENU={
+  "Pizze Tonde":[
+    {n:"Margherita",p:5,ing:"pomodoro, mozzarella, basilico",cat:"pizza",excl:[]},
+    {n:"Biancaneve",p:4.5,ing:"mozzarella, origano",cat:"pizza",excl:[]},
+    {n:"Baby",p:7,ing:"pomodoro, mozzarella, würstel, patatine",cat:"pizza",excl:[]},
+    {n:"Bestemmia",p:8,ing:"pomodoro, mozzarella, salame, funghi",cat:"pizza",excl:[]},
+    {n:"Bolognese",p:8,ing:"mortadella, mozzarella, pesto e granella di pistacchio",cat:"pizza",excl:[]},
+    {n:"Bolognese Burrata",p:12,ing:"mortadella, mozzarella, burrata, pesto e granella di pistacchio",cat:"pizza",excl:[]},
+    {n:"Boscaiola",p:8,ing:"pomodoro, mozzarella, speck, funghi, scamorza",cat:"pizza",excl:[]},
+    {n:"Bugs Bunny",p:7,ing:"pomodorini pachino, mozzarella, capperi, acciughe",cat:"pizza",excl:[]},
+    {n:"Calabrese",p:8,ing:"pomodoro, mozzarella, peperoni, melanzane fritte, olive, peperoncino",cat:"pizza",excl:[]},
+    {n:"Caprese",p:7,ing:"mozzarella di bufala, pomodorini, basilico",cat:"pizza",excl:[]},
+    {n:"Capricciosa",p:8,ing:"pomodoro, mozzarella, würstel, carciofini, funghi",cat:"pizza",excl:[]},
+    {n:"Diavola",p:7,ing:"pomodoro, mozzarella, salame, olive",cat:"pizza",excl:[]},
+    {n:"Fantasy",p:8,ing:"pomodoro, mozzarella, salame, lattuga, olive",cat:"pizza",excl:[]},
+    {n:"Gustosa",p:8,ing:"pomodorini pachino, mozzarella, prosciutto crudo, rucola, scaglie di grana",cat:"pizza",excl:[]},
+    {n:"Marinara",p:4,ing:"pomodoro, olio, aglio, origano",cat:"pizza",excl:[]},
+    {n:"Napoli",p:7,ing:"pomodoro, mozzarella, capperi, acciughe",cat:"pizza",excl:[]},
+    {n:"No Glutine",p:8,ing:"pomodoro, mozzarella",cat:"pizza",excl:[]},
+    {n:"Ortolana",p:8,ing:"pomodoro, mozzarella, peperoni arrosto, melanzane fritte, zucchine fritte",cat:"pizza",excl:[]},
+    {n:"Quattro Formaggi",p:8,ing:"mozzarella, scamorza, edamer, gorgonzola",cat:"pizza",excl:[]},
+    {n:"Quattro Stagioni",p:8,ing:"pomodoro, mozzarella, carciofini, funghi, olive, prosciutto cotto",cat:"pizza",excl:[]},
+    {n:"Regina",p:5,ing:"pomodoro, pomodorini, mozzarella, basilico",cat:"pizza",excl:[]},
+    {n:"Suprema",p:9,ing:"pomodorini pachino, mozzarella, bresaola, rucola, scaglie di grana",cat:"pizza",excl:[]},
+    {n:"Tonnara",p:7,ing:"pomodoro, mozzarella, tonno",cat:"pizza",excl:[]},
+    {n:"Vegetariana",p:7,ing:"pomodoro, mozzarella, lattuga, radicchio, rucola",cat:"pizza",excl:[]}
+  ],
+  "Pizze Max":[
+    {n:"Max Margherita",p:12,ing:"pomodoro, mozzarella",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Baby",p:15,ing:"pomodoro, mozzarella, würstel, patatine",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Bestemmia",p:15,ing:"pomodoro, mozzarella, salame, funghi",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Biancaneve",p:12,ing:"mozzarella, origano",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Bolognese",p:15,ing:"mortadella, mozzarella, pesto e granella di pistacchio",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Bolognese Burrata",p:15,ing:"mortadella, mozzarella, burrata, pesto e granella di pistacchio",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Boscaiola",p:15,ing:"pomodoro, mozzarella, speck, funghi, scamorza",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Bugs Bunny",p:15,ing:"pomodorini, mozzarella, capperi, acciughe",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Calabrese",p:15,ing:"pomodoro, mozzarella, peperoni, melanzane fritte, olive",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Caprese",p:15,ing:"mozzarella di bufala, pomodorini, basilico",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Capricciosa",p:15,ing:"pomodoro, mozzarella, würstel, carciofini, funghi",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Diavola",p:15,ing:"pomodoro, mozzarella, salame, olive",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Farcita (metà/metà)",p:15,ing:"",extraMax:true,cat:"pizza",excl:[],metaMeta:true},
+    {n:"Max Farcita (+)",p:15,ing:"",extraMax:true,cat:"pizza",excl:[],farcitaPlus:true},
+    {n:"Max Fantasy",p:15,ing:"pomodoro, mozzarella, salame, lattuga, olive",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Gustosa",p:15,ing:"pomodorini, mozzarella, prosciutto crudo, rucola, scaglie di grana",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Marinara",p:15,ing:"pomodoro, olio, aglio, origano",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Napoli",p:15,ing:"pomodoro, mozzarella, capperi, acciughe",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max No Glutine",p:15,ing:"pomodoro, mozzarella",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Ortolana",p:15,ing:"pomodoro, mozzarella, peperoni arrosto, melanzane fritte, zucchine fritte",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Quattro Formaggi",p:15,ing:"mozzarella, scamorza, edamer, gorgonzola",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Quattro Stagioni",p:15,ing:"pomodoro, mozzarella, carciofini, funghi, olive, cotto",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Regina",p:15,ing:"pomodoro, pomodorini, mozzarella, basilico",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Suprema",p:15,ing:"pomodorini, mozzarella, bresaola, rucola, scaglie di grana",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Tonnara",p:15,ing:"pomodoro, mozzarella, tonno",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Max Vegetariana",p:15,ing:"pomodoro, mozzarella, lattuga, radicchio, rucola",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Teglia Margherita (8pz)",p:16,ing:"pomodoro, mozzarella",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Teglia Farcita (8pz)",p:20,ing:"ingredienti vari",extraMax:true,cat:"pizza",excl:[]}
+  ],
+  "Pizze Mezzo Metro":[
+    {n:"Mezzo Metro Margherita",p:12,ing:"pomodoro, mozzarella",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Baby",p:15,ing:"pomodoro, mozzarella, würstel, patatine",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Bestemmia",p:15,ing:"pomodoro, mozzarella, salame, funghi",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Biancaneve",p:12,ing:"mozzarella, origano",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Bolognese",p:15,ing:"mortadella, mozzarella, pesto e granella di pistacchio",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Bolognese Burrata",p:15,ing:"mortadella, mozzarella, burrata, pesto e granella di pistacchio",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Boscaiola",p:15,ing:"pomodoro, mozzarella, speck, funghi, scamorza",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Bugs Bunny",p:15,ing:"pomodorini, mozzarella, capperi, acciughe",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Calabrese",p:15,ing:"pomodoro, mozzarella, peperoni, melanzane fritte, olive",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Caprese",p:15,ing:"mozzarella di bufala, pomodorini, basilico",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Capricciosa",p:15,ing:"pomodoro, mozzarella, würstel, carciofini, funghi",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Diavola",p:15,ing:"pomodoro, mozzarella, salame, olive",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Farcita (metà/metà)",p:15,ing:"",extraMax:true,cat:"pizza",excl:[],metaMeta:true},
+    {n:"Mezzo Metro Farcita (+)",p:15,ing:"",extraMax:true,cat:"pizza",excl:[],farcitaPlus:true},
+    {n:"Mezzo Metro Fantasy",p:15,ing:"pomodoro, mozzarella, salame, lattuga, olive",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Gustosa",p:15,ing:"pomodorini, mozzarella, prosciutto crudo, rucola, scaglie di grana",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Marinara",p:15,ing:"pomodoro, olio, aglio, origano",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Napoli",p:15,ing:"pomodoro, mozzarella, capperi, acciughe",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro No Glutine",p:15,ing:"pomodoro, mozzarella",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Ortolana",p:15,ing:"pomodoro, mozzarella, peperoni arrosto, melanzane fritte, zucchine fritte",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Quattro Formaggi",p:15,ing:"mozzarella, scamorza, edamer, gorgonzola",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Quattro Stagioni",p:15,ing:"pomodoro, mozzarella, carciofini, funghi, olive, cotto",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Regina",p:15,ing:"pomodoro, pomodorini, mozzarella, basilico",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Suprema",p:15,ing:"pomodorini, mozzarella, bresaola, rucola, scaglie di grana",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Tonnara",p:15,ing:"pomodoro, mozzarella, tonno",extraMax:true,cat:"pizza",excl:[]},
+    {n:"Mezzo Metro Vegetariana",p:15,ing:"pomodoro, mozzarella, lattuga, radicchio, rucola",extraMax:true,cat:"pizza",excl:[]}
+  ],
+  "Rosticceria":[
+    {n:"Arancino al Ragù",p:2.5,ing:"riso, mozzarella, sugo alla bolognese",cat:"rosticceria"},
+    {n:"Arancino Salsiccia",p:2.5,ing:"riso, sugo con salsiccia",cat:"rosticceria"},
+    {n:"Fagottino",p:2.5,ing:"",cat:"rosticceria"},
+    {n:"Pizza Al Taglio",p:2,ing:"",cat:"rosticceria"},
+    {n:"Pizza Farcita",p:2.5,ing:"",cat:"rosticceria"},
+    {n:"Calzone Baby",p:2.5,ing:"pomodoro, würstel, patatine",cat:"rosticceria"},
+    {n:"Calzone Fritto",p:2,ing:"pomodoro, mozzarella, prosciutto cotto",cat:"rosticceria"},
+    {n:"Calzone Fritto Impanato",p:2.5,ing:"pomodoro, mozzarella, prosciutto cotto",cat:"rosticceria"},
+    {n:"Crocchetta di Patate",p:1.5,ing:"",cat:"rosticceria"},
+    {n:"Crostone al Cotto",p:3,ing:"besciamella, mozzarella, prosciutto cotto",cat:"rosticceria"},
+    {n:"Crostone con Pancetta",p:3,ing:"mozzarella, besciamella, pancetta",cat:"rosticceria"},
+    {n:"Crostone con Spinaci",p:3,ing:"mozzarella, besciamella, spinaci",cat:"rosticceria"},
+    {n:"Crostone Salame Piccante",p:3,ing:"mozzarella, besciamella, salame piccante",cat:"rosticceria"},
+    {n:"Crostone Speck e Funghi",p:3,ing:"mozzarella, besciamella, speck, funghi",cat:"rosticceria"},
+    {n:"Medaglione",p:1.5,ing:"crocchette, scamorza, salame piccante",cat:"rosticceria"},
+    {n:"Mozzarella in Carrozza",p:2,ing:"mozzarella, besciamella",cat:"rosticceria"},
+    {n:"Tramezzino Integrale",p:4,ing:"",cat:"rosticceria"},
+    {n:"Tramezzino Pancetta",p:3,ing:"pomodoro, pancetta, formaggio, lattuga, maionese",cat:"rosticceria"},
+    {n:"Tramezzino Tonno",p:3,ing:"pomodoro, maionese, prosciutto cotto, lattuga, tonno",cat:"rosticceria"},
+    {n:"Würstel in Camicia",p:2,ing:"",cat:"rosticceria"}
+  ],
+  "Stuzzicheria":[
+    {n:"Misto Bugs Bunny",p:5,ing:"patate, noisette, olive ascolane, mozzarelline, würstel",cat:"rosticceria"},
+    {n:"Mozzarelline (8pz)",p:3.5,ing:"",cat:"rosticceria"},
+    {n:"Noisette",p:3.5,ing:"",cat:"rosticceria"},
+    {n:"Olive Ascolane (8pz)",p:3.5,ing:"",cat:"rosticceria"},
+    {n:"Patatine",p:2.5,ing:"",cat:"rosticceria"},
+    {n:"Patatine e Würstel",p:3,ing:"",cat:"rosticceria"},
+    {n:"Porzione Pat. Würstel e Pancetta",p:4,ing:"",cat:"rosticceria"}
+  ],
+  "Bibite":[
+    {n:"Acqua piccola",p:1,ing:"",cat:"bibita"},
+    {n:"Chinotto",p:2.5,ing:"",cat:"bibita"},
+    {n:"Coca Cola 1L",p:3,ing:"",cat:"bibita"},
+    {n:"Coca Cola lattina",p:2,ing:"",cat:"bibita"},
+    {n:"Coca Cola plastica",p:3,ing:"",cat:"bibita"},
+    {n:"Coca Cola vetro",p:3,ing:"",cat:"bibita"},
+    {n:"Fanta lattina",p:2,ing:"",cat:"bibita"},
+    {n:"Fanta plastica",p:3,ing:"",cat:"bibita"},
+    {n:"Fanta vetro",p:3,ing:"",cat:"bibita"},
+    {n:"Sprite lattina",p:2,ing:"",cat:"bibita"},
+    {n:"Sprite vetro",p:3,ing:"",cat:"bibita"},
+    {n:"Thè Pesca/Limone",p:1.5,ing:"",cat:"bibita"},
+    {n:"🍺 ── BIRRE ──",p:0,ing:"",cat:"separatore",separatore:true},
+    {n:"Björne",p:3,ing:"",cat:"birra"},
+    {n:"Corona",p:4,ing:"",cat:"birra"},
+    {n:"Nastro Azzurro 33cl",p:2,ing:"",cat:"birra"},
+    {n:"Nastro Azzurro 66cl",p:4,ing:"",cat:"birra"},
+    {n:"Peroni 33cl",p:1.5,ing:"",cat:"birra"},
+    {n:"Peroni 66cl",p:3,ing:"",cat:"birra"},
+    {n:"Raffo",p:2.5,ing:"",cat:"birra"},
+    {n:"Tennent's",p:3,ing:"",cat:"birra"}
+  ]
+};
 
-function load(){
-  try{var r=localStorage.getItem(KEY);
-    if(!r){var legacy=localStorage.getItem("soldicamera.v1");
-      if(legacy){localStorage.setItem(KEY,legacy);r=legacy;}}
-    if(!r)return JSON.parse(JSON.stringify(blank));
-    var d=JSON.parse(r);for(var k in blank)if(!(k in d))d[k]=Array.isArray(blank[k])?[]:blank[k];return d;}
-  catch(e){return JSON.parse(JSON.stringify(blank));}
-}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast("Spazio esaurito: fai un backup");}}
-function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
-
-/* ============================ UTIL ============================ */
-function num(x){
-  if(typeof x==="number")return x;
-  var s=String(x||"").replace(/[^0-9.,-]/g,"").trim();
-  if(!s)return 0;
-  if(s.indexOf(",")>-1&&s.indexOf(".")>-1)s=s.replace(/\./g,"").replace(",",".");
-  else s=s.replace(",",".");
-  var n=parseFloat(s);return isNaN(n)?0:n;
-}
-function eur(n,sign){
-  var s=(Math.abs(n)).toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2});
-  var p=n<0?"-":(sign&&n>0?"+":"");
-  return p+s+" €";
-}
-function eur0(n){return Math.round(n).toLocaleString("it-IT")+" €";}
-function today(){var d=new Date();return d.toISOString().slice(0,10);}
-function dmy(s){if(!s)return"";var p=s.split("-");return p[2]+"/"+p[1];}
-function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){
-  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
-function monthOf(s){return (s||"").slice(0,7);}
-function curMonth(){return today().slice(0,7);}
-function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("on");
-  clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove("on");},2100);}
-
-/* ============================ LEDGER ============================ */
-/* ogni evento che muove soldi veri scrive qui */
-function post(wallet,amount,label,kind,ref,date){
-  S.ledger.push({id:uid(),w:wallet,a:amount,l:label,k:kind,ref:ref||null,d:date||today()});
-}
-function unpost(ref){S.ledger=S.ledger.filter(function(e){return e.ref!==ref;});}
-function balance(w){return S.ledger.reduce(function(t,e){return e.w===w?t+e.a:t;},0);}
-
-/* ============================ BUSINESS ============================ */
-function oPieces(o){return o.items.reduce(function(t,i){return t+i.qty;},0);}
-function oGoods(o){return o.items.reduce(function(t,i){return t+i.qty*i.price;},0);}
-function oShip(o){return num(o.ship1)+num(o.ship2);}
-function oCost(o){return oGoods(o)+oShip(o);}
-function oOpen(o){return !o.ship2paid;}
-function unitCost(o,it){var p=oPieces(o);return it.price+(p?oShip(o)/p:0);}
-function soldQty(oid,iid){return S.sales.reduce(function(t,s){return (s.oid===oid&&s.iid===iid)?t+s.qty:t;},0);}
-function leftQty(o,it){return it.qty-soldQty(o.id,it.id);}
-function oRevenue(oid){return S.sales.reduce(function(t,s){return s.oid===oid?t+s.price:t;},0);}
-function stockValue(){
-  return S.orders.reduce(function(t,o){
-    return t+o.items.reduce(function(u,it){return u+leftQty(o,it)*unitCost(o,it);},0);
-  },0);
-}
-function stockPieces(){
-  return S.orders.reduce(function(t,o){
-    return t+o.items.reduce(function(u,it){return u+leftQty(o,it);},0);},0);
-}
-function saleProfit(s){
-  var o=find(S.orders,s.oid);if(!o)return s.price;
-  var it=find(o.items,s.iid);if(!it)return s.price;
-  return s.price-unitCost(o,it)*s.qty;
-}
-function find(arr,id){for(var i=0;i<arr.length;i++)if(arr[i].id===id)return arr[i];return null;}
-
-/* ============================ TOTALI ============================ */
-function debtLeft(){return S.debts.reduce(function(t,d){return t+num(d.left);},0);}
-function playBalance(){return S.play.reduce(function(t,p){return t+(p.kind==="prelievo"?p.amount:-p.amount);},0);}
-function playMonth(){return S.play.reduce(function(t,p){
-  return monthOf(p.date)===curMonth()?t+(p.kind==="prelievo"?p.amount:-p.amount):t;},0);}
-function promoWaiting(){return S.promos.reduce(function(t,p){return p.status==="accreditato"?t+num(p.value):t;},0);}
-function promoTotal(){return S.promos.reduce(function(t,p){
-  return (p.status==="accreditato"||p.status==="convertito")?t+num(p.value):t;},0);}
-function netWorth(){return balance("contanti")+balance("conto")+stockValue()-debtLeft();}
-function profitMonth(){
-  return S.sales.reduce(function(t,s){return monthOf(s.date)===curMonth()?t+saleProfit(s):t;},0);
-}
-
-/* ============================ NAV ============================ */
-var view="home";
-var TABS=[
- {k:"home",n:"Home",i:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/>'},
- {k:"mov",n:"Movimenti",i:'<path d="M4 7h13"/><path d="M14 4l3 3-3 3"/><path d="M20 17H7"/><path d="M10 14l-3 3 3 3"/>'},
- {k:"biz",n:"Business",i:'<path d="M3 8h18l-1.5 12h-15z"/><path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2"/>'},
- {k:"promo",n:"Promo",i:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.3 2.5-5.5 5.5-5.5s5.5 2.2 5.5 5.5"/><path d="M17 7h4"/><path d="M19 5v4"/>'},
- {k:"play",n:"Gioco",i:'<rect x="3" y="6" width="18" height="12" rx="3"/><circle cx="8.5" cy="12" r="1.3"/><circle cx="15.5" cy="12" r="1.3"/>'}
+const EXTRAS=[
+  {n:"Würstel",p:1},{n:"Patate",p:1},
+  {n:"Acciughe",p:1},{n:"Basilico",p:0},{n:"Bresaola",p:2},{n:"Bufala",p:2},
+  {n:"Capperi",p:1},{n:"Carciofi",p:1},{n:"Cipolla",p:1},{n:"Cotto",p:1},{n:"Crudo",p:1},
+  {n:"Crema di pistacchio",p:2},{n:"Edamer",p:1},{n:"Fiori di zucca",p:1},
+  {n:"Funghi",p:1},{n:"Gorgonzola",p:1},{n:"Granella di pistacchio",p:2},
+  {n:"Mais",p:1},{n:"Melanzane arrosto",p:1},{n:"Melanzane fritte",p:1},
+  {n:"Mortadella",p:1},{n:"Mozzarella extra",p:1},
+  {n:"Nduja",p:1},{n:"Olive",p:1},{n:"Origano",p:0},{n:"Pancetta",p:1},
+  {n:"Panna",p:1},{n:"Patate al forno",p:1},{n:"Peperoncino",p:1},{n:"Peperoni",p:1},{n:"Peperoni arrosto",p:1},
+  {n:"Pomodorini",p:1},{n:"Porchetta",p:2},{n:"Porcini",p:1},{n:"Rucola",p:1},
+  {n:"Salame dolce",p:1},{n:"Salame piccante",p:1},{n:"Salsiccia",p:2},
+  {n:"Scaglie di grana",p:1},{n:"Scamorza",p:1},{n:"Speck",p:1},
+  {n:"Tonno",p:1},{n:"Uovo Sodo",p:2},{n:"Zucchine arrosto",p:1},{n:"Zucchine fritte",p:1},
+  {n:"No Lattosio",p:0,special:true}
 ];
-function renderTabs(){
-  document.getElementById("tabs").innerHTML=TABS.map(function(t){
-    return '<button class="tab '+(view===t.k?"on":"")+'" data-tab="'+t.k+'">'+
-      '<svg viewBox="0 0 24 24">'+t.i+'</svg>'+t.n+'</button>';}).join("");
-}
-function go(k){view=k;render();window.scrollTo(0,0);}
 
-/* ============================ RENDER ============================ */
-function render(){
-  var el=document.getElementById("app");
-  el.innerHTML=({home:vHome,mov:vMov,biz:vBiz,promo:vPromo,play:vPlay,debts:vDebts,backup:vBackup}[view]||vHome)();
-  renderTabs();
-}
+const EXTRAS_MAX=[
+  {n:"Würstel",p:2},{n:"Patate",p:2},
+  {n:"Acciughe",p:2},{n:"Basilico",p:0},{n:"Bresaola",p:3},{n:"Bufala",p:3},
+  {n:"Capperi",p:2},{n:"Carciofi",p:2},{n:"Cipolla",p:2},{n:"Cotto",p:2},{n:"Crudo",p:2},
+  {n:"Crema di pistacchio",p:2},{n:"Edamer",p:2},{n:"Fiori di zucca",p:2},
+  {n:"Funghi",p:2},{n:"Gorgonzola",p:2},{n:"Granella di pistacchio",p:2},
+  {n:"Mais",p:2},{n:"Melanzane arrosto",p:2},{n:"Melanzane fritte",p:2},
+  {n:"Mortadella",p:2},{n:"Mozzarella extra",p:2},
+  {n:"Nduja",p:2},{n:"Olive",p:2},{n:"Origano",p:0},{n:"Pancetta",p:2},
+  {n:"Panna",p:2},{n:"Patate al forno",p:2},{n:"Peperoncino",p:2},{n:"Peperoni",p:2},{n:"Peperoni arrosto",p:2},
+  {n:"Pomodorini",p:2},{n:"Porchetta",p:2},{n:"Porcini",p:2},{n:"Rucola",p:2},
+  {n:"Salame dolce",p:2},{n:"Salame piccante",p:2},{n:"Salsiccia",p:2},
+  {n:"Scaglie di grana",p:2},{n:"Scamorza",p:2},{n:"Speck",p:2},
+  {n:"Tonno",p:2},{n:"Uovo Sodo",p:2},{n:"Zucchine arrosto",p:2},{n:"Zucchine fritte",p:2},
+  {n:"No Lattosio",p:0,special:true}
+];
 
-function header(label,title,gear){
-  return '<div class="hdr"><div><div class="hdr-l">'+label+'</div><h1>'+title+'</h1></div>'+
-   (gear?'<button class="icon-btn" data-go="backup" aria-label="Impostazioni">'+
-     '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#9AA3B2" stroke-width="1.7" stroke-linecap="round">'+
-     '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/>'+
-     '</svg></button>':'')+'</div>';
-}
-
-/* ---------- HOME ---------- */
-function vHome(){
-  var n=netWorth(),pb=playBalance(),pw=promoWaiting(),pm=profitMonth();
-  var h=header("Ciao Carmelo","CB29 Economy",true);
-  h+='<div class="net"><div class="lab">Netto reale</div>'+
-     '<div class="big '+(n<0?"neg":"")+'">'+eur(n)+'</div>'+
-     '<div class="sub">Contanti + Conto + Magazzino − Debiti</div>'+
-     '<div class="chips">'+
-      chip("Contanti",balance("contanti"))+chip("Conto",balance("conto"))+
-      chip("Magazzino",stockValue())+chip("Debiti",-debtLeft())+
-     '</div></div>';
-
-  if(!S.ledger.length&&!S.promos.length&&!S.orders.length){
-    h+='<div class="sec"><div class="card">'+
-      '<b style="font-family:var(--ff-d);font-size:15.5px">Si parte da qui</b>'+
-      '<p class="tile-s" style="margin:5px 0 12px">Scrivi quanti soldi hai adesso, poi registra le cose man mano che succedono.</p>'+
-      '<div style="display:flex;gap:8px">'+
-      '<button class="btn ghost" data-adj="contanti" style="padding:11px">Imposta contanti</button>'+
-      '<button class="btn ghost" data-adj="conto" style="padding:11px">Imposta conto</button>'+
-      '</div></div></div>';
-  }
-  h+='<div class="sec"><div class="grid2">'+
-     '<button class="tile" data-go="promo"><div class="tile-t">Promo</div>'+
-       '<div class="tile-v acc">'+eur0(pw)+'</div><div class="tile-s">in buoni da usare</div></button>'+
-     '<button class="tile" data-go="play"><div class="tile-t">Gioco</div>'+
-       '<div class="tile-v '+(pb<0?"neg":pb>0?"pos":"mut")+'">'+eur0(pb)+'</div>'+
-       '<div class="tile-s">'+(pb<0?"sotto da sempre":pb>0?"sopra da sempre":"niente ancora")+'</div></button>'+
-     '</div></div>';
-
-  h+='<div class="sec"><button class="tile" data-go="biz"><div class="tile-top">'+
-     '<div class="tile-t">Business · questo mese</div><span class="pill">'+stockPieces()+' pezzi</span></div>'+
-     '<div class="tile-v '+(pm>=0?"pos":"neg")+'">'+eur(pm,true)+'</div>'+
-     '<div class="tile-s">profitto sulle vendite di '+monthName()+'</div></button></div>';
-
-  var last=S.ledger.slice().sort(byDateDesc).slice(0,6);
-  h+='<div class="sec"><div class="sec-h"><h2>Ultimi movimenti</h2>'+
-     (S.ledger.length?'<button class="link" data-go="mov">Vedi tutti</button>':'')+'</div><div class="card">'+
-     (last.length?last.map(ledRow).join(""):
-      '<div class="empty">Ancora niente.<br>Tocca <b>+</b> per registrare la prima cosa.</div>')+
-     '</div></div>';
-
-  h+='<div class="sec"><button class="tile" data-go="debts"><div class="tile-top">'+
-     '<div class="tile-t">Debiti e rate</div><span class="pill">'+S.debts.length+'</span></div>'+
-     '<div class="tile-v '+(debtLeft()?"neg":"")+'">'+eur0(debtLeft())+'</div>'+
-     '<div class="tile-s">ancora da pagare</div></button></div>';
-  return h;
-}
-function monthName(){
-  var m=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
-  return m[new Date().getMonth()];
-}
-function chip(l,v){return '<div class="chip"><span>'+l+'</span><b class="'+(v<0?"neg":"")+'">'+eur(v)+'</b></div>';}
-function byDateDesc(a,b){return (b.d||b.date||"").localeCompare(a.d||a.date||"")|| (b.id>a.id?1:-1);}
-function ledRow(e){
-  return '<div class="row" data-del-led="'+e.id+'"><div class="row-i">'+esc((e.k||"?").slice(0,1).toUpperCase())+'</div>'+
-   '<div class="row-m"><b>'+esc(e.l)+'</b><span>'+dmy(e.d)+' · '+esc(e.w)+'</span></div>'+
-   '<div class="row-a '+(e.a<0?"neg":"pos")+'">'+eur(e.a,true)+'</div></div>';
-}
-
-/* ---------- MOVIMENTI ---------- */
-function vMov(){
-  var h=header("Portafogli","Movimenti",true);
-  h+='<div class="grid2" style="margin-top:6px">'+
-     '<button class="tile" data-adj="contanti"><div class="tile-t">Contanti</div><div class="tile-v '+
-       (balance("contanti")<0?"neg":"")+'">'+eur0(balance("contanti"))+'</div>'+
-       '<div class="tile-s">tocca per correggere</div></button>'+
-     '<button class="tile" data-adj="conto"><div class="tile-t">Conto</div><div class="tile-v '+
-       (balance("conto")<0?"neg":"")+'">'+eur0(balance("conto"))+'</div>'+
-       '<div class="tile-s">tocca per correggere</div></button></div>';
-  var g={},L=S.ledger.slice().sort(byDateDesc);
-  L.forEach(function(e){var m=monthOf(e.d);(g[m]=g[m]||[]).push(e);});
-  var keys=Object.keys(g).sort().reverse();
-  if(!keys.length)h+='<div class="sec"><div class="card"><div class="empty">Nessun movimento.<br>Tocca <b>+</b> per iniziare.</div></div></div>';
-  keys.forEach(function(m){
-    var tot=g[m].reduce(function(t,e){return t+e.a;},0);
-    h+='<div class="sec"><div class="sec-h"><h2>'+labMonth(m)+'</h2>'+
-       '<span class="mono '+(tot<0?"neg":"pos")+'" style="font-size:13px;font-weight:600">'+eur(tot,true)+'</span></div>'+
-       '<div class="card">'+g[m].map(ledRow).join("")+'</div></div>';
-  });
-  h+='<p class="empty" style="font-size:12px">Tocca un movimento per eliminarlo.</p>';
-  return h;
-}
-function labMonth(m){
-  var mm=["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
-  var p=m.split("-");return mm[parseInt(p[1],10)-1]+" "+p[0];
-}
-
-/* ---------- BUSINESS ---------- */
-function vBiz(){
-  var h=header("Acquisti e vendite","Business",true);
-  var pm=profitMonth();
-  var allProfit=S.sales.reduce(function(t,s){return t+saleProfit(s);},0);
-  h+='<div class="net" style="border-radius:var(--r)"><div class="lab">Profitto totale</div>'+
-     '<div class="big '+(allProfit>=0?"pos":"neg")+'" style="font-size:36px">'+eur(allProfit,true)+'</div>'+
-     '<div class="chips">'+chip("Questo mese",pm)+chip("Magazzino",stockValue())+'</div></div>';
-
-  h+='<div class="sec"><div class="sec-h"><h2>Ordini</h2>'+
-     '<button class="link" data-sheet="order">+ Nuovo ordine</button></div>';
-  if(!S.orders.length)h+='<div class="card"><div class="empty">Nessun ordine.<br>Registra il primo ordine dal fornitore.</div></div>';
-  S.orders.slice().sort(byDateDesc).forEach(function(o){
-    var cost=oCost(o),rev=oRevenue(o.id),p=oPieces(o),left=o.items.reduce(function(t,i){return t+leftQty(o,i);},0);
-    var pct=cost>0?Math.min(100,rev/cost*100):0;
-    h+='<div class="card" data-order="'+o.id+'" style="cursor:pointer">'+
-      '<div class="tile-top"><b style="font-family:var(--ff-d);font-size:15.5px">'+esc(o.name)+'</b>'+
-      (oOpen(o)?'<span class="pill wait">spedizione da pagare</span>':'<span class="pill ok">arrivato</span>')+'</div>'+
-      '<div class="tile-s" style="margin-top:4px">'+dmy(o.date)+' · '+p+' pezzi · costo '+eur(cost)+
-        (oOpen(o)?' <span class="acc">(provvisorio)</span>':'')+'</div>'+
-      '<div class="bar"><i class="'+(pct>=100?"done":"")+'" style="width:'+pct.toFixed(0)+'%"></i></div>'+
-      '<div class="tile-s" style="margin-top:7px">Rientrato '+eur(rev)+' su '+eur(cost)+' · '+
-        (rev>=cost?'<span class="pos">tutto recuperato, il resto è guadagno</span>':
-         '<span class="acc">mancano '+eur(cost-rev)+'</span>')+'</div>'+
-      '<div class="tile-s">'+left+' pezzi ancora in magazzino</div></div>';
-  });
-  h+='</div>';
-
-  var sales=S.sales.slice().sort(byDateDesc).slice(0,12);
-  h+='<div class="sec"><div class="sec-h"><h2>Ultime vendite</h2>'+
-     (stockPieces()?'<button class="link" data-sheet="sale">+ Vendita</button>':'')+'</div><div class="card">'+
-     (sales.length?sales.map(function(s){
-        var o=find(S.orders,s.oid),it=o?find(o.items,s.iid):null;
-        return '<div class="row" data-del-sale="'+s.id+'"><div class="row-i">V</div><div class="row-m">'+
-          '<b>'+esc(it?it.name:"articolo")+(s.qty>1?" ×"+s.qty:"")+'</b>'+
-          '<span>'+dmy(s.date)+' · '+esc(s.channel)+' · '+eur(s.price)+'</span></div>'+
-          '<div class="row-a '+(saleProfit(s)>=0?"pos":"neg")+'">'+eur(saleProfit(s),true)+'</div></div>';
-      }).join(""):'<div class="empty">Nessuna vendita registrata.</div>')+'</div></div>';
-  return h;
-}
-
-/* ---------- PROMO ---------- */
-function vPromo(){
-  var h=header("Codici amico","Promo",true);
-  h+='<div class="net" style="border-radius:var(--r)"><div class="lab">Guadagnato con le promo</div>'+
-     '<div class="big acc" style="font-size:36px">'+eur(promoTotal())+'</div>'+
-     '<div class="chips">'+chip("Da usare",promoWaiting())+
-      '<div class="chip"><span>Persone</span><b>'+S.promos.length+'</b></div></div></div>';
-  var g={},P=S.promos.slice().sort(byDateDesc);
-  P.forEach(function(p){var m=monthOf(p.date)||"0000-00";(g[m]=g[m]||[]).push(p);});
-  var keys=Object.keys(g).sort().reverse();
-  h+='<div class="sec"><div class="sec-h"><h2>Persone portate</h2>'+
-     '<button class="link" data-sheet="promo">+ Aggiungi</button></div>';
-  if(!keys.length)h+='<div class="card"><div class="empty">Nessuna promo.<br>Aggiungi la prima persona che porti.</div></div>';
-  keys.forEach(function(m){
-    var tot=g[m].reduce(function(t,p){return t+((p.status==="accreditato"||p.status==="convertito")?num(p.value):0);},0);
-    h+='<h4 class="sub">'+labMonth(m)+' · '+eur0(tot)+'</h4><div class="card">'+
-      g[m].map(function(p){
-        var cls=p.status==="convertito"?"ok":p.status==="accreditato"?"wait":"off";
-        return '<div class="row" data-promo="'+p.id+'"><div class="row-i">'+esc(p.person.slice(0,1).toUpperCase())+'</div>'+
-          '<div class="row-m"><b>'+esc(p.person)+'</b><span>'+dmy(p.date)+' · '+esc(p.type)+
-            (p.tokens?' · '+p.tokens+' token':'')+
-            (p.status==="convertito"&&p.into?' → '+esc(p.into):'')+'</span></div>'+
-          '<div style="text-align:right"><div class="row-a acc">'+eur0(num(p.value))+'</div>'+
-          '<span class="pill '+cls+'" style="margin-top:3px">'+esc(p.status)+'</span></div></div>';
-      }).join("")+'</div>';
-  });
-  h+='</div>';
-  return h;
-}
-
-/* ---------- GIOCO ---------- */
-function vPlay(){
-  var b=playBalance(),m=playMonth();
-  var dep=S.play.reduce(function(t,p){return p.kind==="deposito"?t+p.amount:t;},0);
-  var pre=S.play.reduce(function(t,p){return p.kind==="prelievo"?t+p.amount:t;},0);
-  var h=header("Scommesse","Gioco",true);
-  h+='<div class="net" style="border-radius:var(--r)"><div class="lab">Saldo da quando hai iniziato</div>'+
-     '<div class="big '+(b<0?"neg":"pos")+'">'+eur(b,true)+'</div>'+
-     '<div class="sub">'+(b<0?"è quanto hai messo dentro e non è più uscito":"sei in positivo")+'</div>'+
-     '<div class="chips">'+
-      '<div class="chip"><span>Depositato</span><b class="neg">'+eur(dep)+'</b></div>'+
-      '<div class="chip"><span>Prelevato</span><b class="pos">'+eur(pre)+'</b></div>'+
-      chip("Questo mese",m)+
-      '<div class="chip"><span>Operazioni</span><b>'+S.play.length+'</b></div>'+
-     '</div></div>';
-  h+='<div class="sec"><div class="note">Il gioco resta fuori dal netto reale: i depositi escono dai tuoi soldi, i prelievi rientrano. Questo numero è la verità su quanto ti è costato finora.</div></div>';
-  h+='<div class="sec"><div class="sec-h"><h2>Movimenti gioco</h2>'+
-     '<button class="link" data-sheet="play">+ Aggiungi</button></div><div class="card">'+
-     (S.play.length?S.play.slice().sort(byDateDesc).map(function(p){
-       return '<div class="row" data-del-play="'+p.id+'"><div class="row-i">'+(p.kind==="deposito"?"D":"P")+'</div>'+
-        '<div class="row-m"><b>'+(p.kind==="deposito"?"Deposito":"Prelievo")+(p.note?" · "+esc(p.note):"")+'</b>'+
-        '<span>'+dmy(p.date)+' · '+esc(p.wallet)+'</span></div>'+
-        '<div class="row-a '+(p.kind==="deposito"?"neg":"pos")+'">'+
-        (p.kind==="deposito"?"-":"+")+eur(p.amount)+'</div></div>';
-     }).join(""):'<div class="empty">Nessun movimento di gioco.</div>')+'</div></div>';
-  return h;
-}
-
-/* ---------- DEBITI ---------- */
-function vDebts(){
-  var h=header("Rate e prestiti","Debiti",true);
-  h+='<div class="net" style="border-radius:var(--r)"><div class="lab">Ancora da pagare</div>'+
-     '<div class="big '+(debtLeft()?"neg":"")+'" style="font-size:36px">'+eur(debtLeft())+'</div></div>';
-  h+='<div class="sec"><div class="sec-h"><h2>Elenco</h2>'+
-     '<button class="link" data-sheet="debt">+ Aggiungi</button></div>';
-  if(!S.debts.length)h+='<div class="card"><div class="empty">Nessun debito aperto.</div></div>';
-  S.debts.forEach(function(d){
-    var pct=num(d.total)>0?(1-num(d.left)/num(d.total))*100:0;
-    h+='<div class="card"><div class="tile-top"><b style="font-family:var(--ff-d);font-size:15.5px">'+esc(d.name)+'</b>'+
-      '<span class="row-a '+(num(d.left)>0?"neg":"pos")+'">'+eur(num(d.left))+'</span></div>'+
-      '<div class="bar"><i class="'+(num(d.left)<=0?"done":"")+'" style="width:'+Math.max(0,Math.min(100,pct)).toFixed(0)+'%"></i></div>'+
-      '<div class="tile-s" style="margin-top:7px">Pagato '+eur(num(d.total)-num(d.left))+' su '+eur(num(d.total))+'</div>'+
-      '<div style="display:flex;gap:8px;margin-top:11px">'+
-       '<button class="btn ghost" data-pay="'+d.id+'" style="padding:10px">Paga una rata</button>'+
-       '<button class="btn danger" data-deldebt="'+d.id+'" style="padding:10px;width:auto;flex:none">Elimina</button>'+
-      '</div></div>';
-  });
-  h+='</div>';
-  return h;
-}
-
-/* ---------- BACKUP ---------- */
-function vBackup(){
-  var h=header("Impostazioni","Backup e dati",false);
-  h+='<div class="sec"><div class="note">I dati stanno solo dentro questo telefono, nessuno li vede. Se pulisci i dati del browser però spariscono: copia ogni tanto il backup e incollalo nelle Note.</div></div>';
-  h+='<div class="sec"><div class="sec-h"><h2>Copia il backup</h2></div>'+
-     '<div class="card"><textarea class="fi" id="bkOut" readonly>'+esc(JSON.stringify(S))+'</textarea>'+
-     '<button class="btn" id="bkCopy" style="margin-top:11px">Copia negli appunti</button></div></div>';
-  h+='<div class="sec"><div class="sec-h"><h2>Ripristina</h2></div>'+
-     '<div class="card"><label class="fl">Incolla qui un backup</label>'+
-     '<textarea class="fi" id="bkIn" placeholder="Incolla il testo del backup..."></textarea>'+
-     '<button class="btn ghost" id="bkRestore" style="margin-top:11px">Ripristina questi dati</button></div></div>';
-  h+='<div class="sec"><div class="card"><div class="kv"><span>Movimenti</span><b>'+S.ledger.length+'</b></div>'+
-     '<div class="kv"><span>Ordini</span><b>'+S.orders.length+'</b></div>'+
-     '<div class="kv"><span>Vendite</span><b>'+S.sales.length+'</b></div>'+
-     '<div class="kv"><span>Promo</span><b>'+S.promos.length+'</b></div>'+
-     '<div class="kv"><span>Gioco</span><b>'+S.play.length+'</b></div></div></div>';
-  h+='<div class="sec"><button class="btn danger" id="wipe">Cancella tutto e ricomincia</button></div>';
-  h+='<div class="sec"><button class="btn ghost" data-go="home">← Torna alla home</button></div>';
-  return h;
-}
-
-/* ============================ SHEET ============================ */
-function openSheet(html){
-  document.getElementById("sheetIn").innerHTML='<div class="grab"></div>'+html;
-  document.getElementById("sheet").classList.add("on");
-  document.getElementById("scrim").classList.add("on");
-}
-function closeSheet(){
-  document.getElementById("sheet").classList.remove("on");
-  document.getElementById("scrim").classList.remove("on");
-}
-function walletSel(id,def){
-  return '<select class="fi" id="'+id+'">'+
-   '<option value="contanti"'+(def==="contanti"?" selected":"")+'>Contanti</option>'+
-   '<option value="conto"'+(def==="conto"?" selected":"")+'>Conto</option></select>';
-}
-function dateIn(id){return '<input class="fi" type="date" id="'+id+'" value="'+today()+'">';}
-function v(id){var e=document.getElementById(id);return e?e.value:"";}
-
-/* ---- menu + ---- */
-function sheetAdd(){
-  var acts=[
-   ["spesa","Spesa","Qualcosa che hai comprato","#F2705E"],
-   ["entrata","Entrata","Soldi che ti sono arrivati","#46C98B"],
-   ["sale","Vendita","Hai venduto un pezzo del magazzino","#E3A84A"],
-   ["order","Ordine fornitore","Nuovo stock dalla Cina","#E3A84A"],
-   ["promo","Promo","Hai portato una persona","#E3A84A"],
-   ["play","Gioco","Deposito o prelievo","#C77DFF"],
-   ["debt","Debito o rata","Klarna e simili","#9AA3B2"]
-  ];
-  openSheet('<h3>Cosa registri?</h3><p class="hint">Scegli e in due tocchi è fatto.</p>'+
-   acts.map(function(a){
-     return '<button class="act" data-sheet="'+a[0]+'">'+
-      '<i style="background:'+a[3]+'22;color:'+a[3]+'">'+a[1].slice(0,1)+'</i>'+
-      '<span style="flex:1"><b>'+a[1]+'</b><span>'+a[2]+'</span></span></button>';
-   }).join(""));
-}
-
-/* ---- spesa / entrata ---- */
-function sheetFlow(kind){
-  var isOut=kind==="spesa";
-  openSheet('<h3>'+(isOut?"Nuova spesa":"Nuova entrata")+'</h3>'+
-   '<p class="hint">'+(isOut?"Esce dal portafoglio che scegli.":"Entra nel portafoglio che scegli.")+'</p>'+
-   '<div class="f">'+
-    '<div><label class="fl">Importo</label><input class="fi mono" id="f_amt" inputmode="decimal" placeholder="0,00"></div>'+
-    '<div><label class="fl">Descrizione</label><input class="fi" id="f_lab" placeholder="'+(isOut?"es. tuta Adidas":"es. regalo nonna")+'"></div>'+
-    '<div class="f2"><div><label class="fl">Categoria</label><select class="fi" id="f_cat">'+
-      CATS.map(function(c){return '<option>'+c+'</option>';}).join("")+'</select></div>'+
-     '<div><label class="fl">Portafoglio</label>'+walletSel("f_w","contanti")+'</div></div>'+
-    '<div><label class="fl">Data</label>'+dateIn("f_d")+'</div>'+
-    '<p class="err" id="f_err" hidden></p>'+
-    '<button class="btn" id="f_go">Registra</button></div>');
-  document.getElementById("f_go").onclick=function(){
-    var a=num(v("f_amt"));
-    if(a<=0)return showErr("f_err","Metti un importo maggiore di zero.");
-    var lab=v("f_lab").trim()||v("f_cat");
-    post(v("f_w"),isOut?-a:a,lab,isOut?"spesa":"entrata",null,v("f_d"));
-    save();closeSheet();render();toast(isOut?"Spesa registrata":"Entrata registrata");
-  };
-}
-function showErr(id,m){var e=document.getElementById(id);e.textContent=m;e.hidden=false;}
-
-/* ---- rettifica saldo ---- */
-function sheetAdjust(w){
-  var cur=balance(w);
-  openSheet('<h3>Saldo '+w+'</h3><p class="hint">Adesso risulta '+eur(cur)+'. Scrivi quanto hai davvero e sistemo io la differenza.</p>'+
-   '<div class="f"><div><label class="fl">Saldo reale</label>'+
-   '<input class="fi mono" id="a_amt" inputmode="decimal" value="'+cur.toFixed(2).replace(".",",")+'"></div>'+
-   '<button class="btn" id="a_go">Correggi</button></div>');
-  document.getElementById("a_go").onclick=function(){
-    var t=num(v("a_amt")),d=t-cur;
-    if(Math.abs(d)<0.005){closeSheet();return;}
-    post(w,d,"Correzione saldo","rettifica",null,today());
-    save();closeSheet();render();toast("Saldo corretto");
-  };
-}
-
-/* ---- ordine ---- */
-var draftItems=[{n:"",q:"",p:""}];
-function sheetOrder(){
-  draftItems=[{n:"",q:"",p:""}];
-  openSheet('<h3>Nuovo ordine</h3><p class="hint">Metti i pezzi e quanto costa ognuno. La spedizione la divido in parti uguali sui pezzi.</p>'+
-   '<div class="f">'+
-    '<div><label class="fl">Nome ordine</label><input class="fi" id="o_name" placeholder="es. Ordine USFans agosto"></div>'+
-    '<div class="f2"><div><label class="fl">Data</label>'+dateIn("o_d")+'</div>'+
-     '<div><label class="fl">Pagato da</label>'+walletSel("o_w","conto")+'</div></div>'+
-    '<div><label class="fl">Articoli</label><div id="o_items"></div>'+
-     '<button class="btn ghost" id="o_add" style="padding:10px;margin-top:8px">+ Aggiungi articolo</button></div>'+
-    '<div><label class="fl">Commissioni + spedizione al magazzino</label>'+
-     '<input class="fi mono" id="o_s1" inputmode="decimal" placeholder="0,00"></div>'+
-    '<div class="note" id="o_prev">Compila gli articoli per vedere il costo a pezzo.</div>'+
-    '<p class="err" id="o_err" hidden></p>'+
-    '<button class="btn" id="o_go">Registra ordine</button></div>');
-  drawItems();
-  document.getElementById("o_add").onclick=function(){readItems();draftItems.push({n:"",q:"",p:""});drawItems();};
-  document.getElementById("o_s1").oninput=preview;
-  document.getElementById("o_go").onclick=function(){
-    readItems();
-    var items=draftItems.filter(function(i){return i.n.trim()&&num(i.q)>0;}).map(function(i){
-      return {id:uid(),name:i.n.trim(),qty:Math.round(num(i.q)),price:num(i.p)};});
-    if(!items.length)return showErr("o_err","Aggiungi almeno un articolo con nome e quantità.");
-    var o={id:uid(),name:v("o_name").trim()||"Ordine",date:v("o_d"),wallet:v("o_w"),
-      ship1:num(v("o_s1")),ship2:0,ship2paid:false,items:items};
-    S.orders.push(o);
-    post(o.wallet,-(oGoods(o)+num(o.ship1)),"Ordine "+o.name,"ordine","order:"+o.id,o.date);
-    save();closeSheet();render();toast("Ordine registrato");
-  };
-}
-function drawItems(){
-  document.getElementById("o_items").innerHTML=draftItems.map(function(it,i){
-    return '<div class="itemrow" style="margin-bottom:7px">'+
-     '<input class="fi" data-i="'+i+'" data-f="n" placeholder="Articolo" value="'+esc(it.n)+'">'+
-     '<input class="fi mono" data-i="'+i+'" data-f="q" inputmode="numeric" placeholder="Qtà" value="'+esc(it.q)+'">'+
-     '<input class="fi mono" data-i="'+i+'" data-f="p" inputmode="decimal" placeholder="€/pz" value="'+esc(it.p)+'">'+
-     (draftItems.length>1?'<button class="mini" data-rm="'+i+'">−</button>':'<span></span>')+'</div>';
-  }).join("");
-  var box=document.getElementById("o_items");
-  box.oninput=preview;
-  box.onclick=function(e){
-    var b=e.target.closest("[data-rm]");if(!b)return;
-    readItems();draftItems.splice(parseInt(b.getAttribute("data-rm"),10),1);drawItems();preview();
-  };
-  preview();
-}
-function readItems(){
-  var box=document.getElementById("o_items");if(!box)return;
-  box.querySelectorAll("input").forEach(function(inp){
-    var i=parseInt(inp.getAttribute("data-i"),10);
-    if(draftItems[i])draftItems[i][inp.getAttribute("data-f")]=inp.value;
-  });
-}
-function preview(){
-  readItems();
-  var pieces=draftItems.reduce(function(t,i){return t+num(i.q);},0);
-  var goods=draftItems.reduce(function(t,i){return t+num(i.q)*num(i.p);},0);
-  var s1=num(v("o_s1"));
-  var el=document.getElementById("o_prev");if(!el)return;
-  if(!pieces){el.textContent="Compila gli articoli per vedere il costo a pezzo.";return;}
-  var per=s1/pieces;
-  el.innerHTML="<b>"+pieces+" pezzi</b> · merce "+eur(goods)+" + spedizione "+eur(s1)+
-   " = <b>"+eur(goods+s1)+"</b><br>Spedizione: "+eur(per)+" a pezzo. "+
-   draftItems.filter(function(i){return i.n.trim()&&num(i.q)>0;}).map(function(i){
-     return esc(i.n)+" → "+eur(num(i.p)+per)+" l'uno";}).join(" · ");
-}
-
-/* ---- dettaglio ordine ---- */
-function sheetOrderDetail(id){
-  var o=find(S.orders,id);if(!o)return;
-  var cost=oCost(o),rev=oRevenue(o.id),prof=S.sales.filter(function(s){return s.oid===o.id;})
-    .reduce(function(t,s){return t+saleProfit(s);},0);
-  var h='<h3>'+esc(o.name)+'</h3><p class="hint">'+dmy(o.date)+' · '+oPieces(o)+' pezzi'+
-    (oOpen(o)?' · <span class="acc">spedizione per l\'Italia non ancora pagata</span>':'')+'</p>';
-  h+='<div class="card"><div class="kv"><span>Merce</span><b>'+eur(oGoods(o))+'</b></div>'+
-     '<div class="kv"><span>Spedizione al magazzino</span><b>'+eur(num(o.ship1))+'</b></div>'+
-     '<div class="kv"><span>Spedizione per l\'Italia</span><b>'+(o.ship2paid?eur(num(o.ship2)):"—")+'</b></div>'+
-     '<div class="kv"><span>Costo totale</span><b>'+eur(cost)+'</b></div>'+
-     '<div class="kv"><span>Incassato finora</span><b class="pos">'+eur(rev)+'</b></div>'+
-     '<div class="kv"><span>Profitto finora</span><b class="'+(prof>=0?"pos":"neg")+'">'+eur(prof,true)+'</b></div></div>';
-  h+='<h4 class="sub">Articoli</h4><div class="card">'+o.items.map(function(it){
-    var left=leftQty(o,it);
-    return '<div class="row" style="cursor:default"><div class="row-i">'+left+'</div>'+
-     '<div class="row-m"><b>'+esc(it.name)+'</b><span>costa '+eur(unitCost(o,it))+' a pezzo'+
-      (oOpen(o)?" (provvisorio)":"")+' · venduti '+soldQty(o.id,it.id)+'/'+it.qty+'</span></div>'+
-     (left>0?'<button class="mini" data-sell="'+o.id+'|'+it.id+'" style="width:34px">›</button>':
-      '<span class="pill ok">finito</span>')+'</div>';
-  }).join("")+'</div>';
-  if(oOpen(o)){
-    h+='<h4 class="sub">Spedizione per l\'Italia</h4><div class="card">'+
-     '<p class="hint" style="margin:0 0 11px">Quando la paghi, ricalcolo il costo reale di ogni pezzo.</p>'+
-     '<div class="f"><div><label class="fl">Importo</label>'+
-     '<input class="fi mono" id="s2_amt" inputmode="decimal" placeholder="0,00"></div>'+
-     '<div><label class="fl">Pagato da</label>'+walletSel("s2_w","conto")+'</div>'+
-     '<button class="btn" id="s2_go">Paga e chiudi l\'ordine</button></div></div>';
-  }
-  h+='<div style="margin-top:16px"><button class="btn danger" data-delorder="'+o.id+'">Elimina ordine</button></div>';
-  openSheet(h);
-  var g=document.getElementById("s2_go");
-  if(g)g.onclick=function(){
-    var a=num(v("s2_amt"));if(a<=0)return toast("Metti l'importo della spedizione");
-    o.ship2=a;o.ship2paid=true;
-    post(v("s2_w"),-a,"Spedizione "+o.name,"spedizione","order2:"+o.id,today());
-    save();closeSheet();render();toast("Costi aggiornati");
-  };
-}
-
-/* ---- vendita ---- */
-function sheetSale(pre){
-  var opts=[];
-  S.orders.forEach(function(o){o.items.forEach(function(it){
-    var l=leftQty(o,it);if(l>0)opts.push({k:o.id+"|"+it.id,t:it.name+" — "+l+" disp. ("+o.name+")"});});});
-  if(!opts.length){openSheet('<h3>Niente in magazzino</h3><p class="hint">Registra prima un ordine dal fornitore.</p>'+
-    '<button class="btn" data-sheet="order">Registra un ordine</button>');return;}
-  openSheet('<h3>Nuova vendita</h3><p class="hint">Scala il pezzo dal magazzino e calcola il profitto vero.</p>'+
-   '<div class="f"><div><label class="fl">Articolo</label><select class="fi" id="v_it">'+
-    opts.map(function(o){return '<option value="'+o.k+'"'+(pre===o.k?" selected":"")+'>'+esc(o.t)+'</option>';}).join("")+
-    '</select></div>'+
-   '<div class="f2"><div><label class="fl">Quantità</label>'+
-     '<input class="fi mono" id="v_q" inputmode="numeric" value="1"></div>'+
-    '<div><label class="fl">Prezzo incassato</label>'+
-     '<input class="fi mono" id="v_p" inputmode="decimal" placeholder="0,00"></div></div>'+
-   '<div class="f2"><div><label class="fl">Dove</label><select class="fi" id="v_c">'+
-     '<option>Vinted</option><option>Wallapop</option><option>Di persona</option><option>Altro</option></select></div>'+
-    '<div><label class="fl">Incassato su</label>'+walletSel("v_w","contanti")+'</div></div>'+
-   '<div><label class="fl">Data</label>'+dateIn("v_d")+'</div>'+
-   '<div class="note" id="v_prev">Scegli l\'articolo e il prezzo.</div>'+
-   '<p class="err" id="v_err" hidden></p>'+
-   '<button class="btn" id="v_go">Registra vendita</button></div>');
-  ["v_it","v_q","v_p"].forEach(function(id){document.getElementById(id).oninput=vPrev;
-    document.getElementById(id).onchange=vPrev;});
-  vPrev();
-  document.getElementById("v_go").onclick=function(){
-    var k=v("v_it").split("|"),o=find(S.orders,k[0]);if(!o)return;
-    var it=find(o.items,k[1]),q=Math.round(num(v("v_q"))),p=num(v("v_p"));
-    if(q<1)return showErr("v_err","La quantità deve essere almeno 1.");
-    if(q>leftQty(o,it))return showErr("v_err","Hai solo "+leftQty(o,it)+" pezzi disponibili.");
-    if(p<=0)return showErr("v_err","Metti il prezzo che hai incassato.");
-    var s={id:uid(),oid:o.id,iid:it.id,qty:q,price:p,channel:v("v_c"),wallet:v("v_w"),date:v("v_d")};
-    S.sales.push(s);
-    post(s.wallet,p,"Venduto "+it.name+(q>1?" ×"+q:""),"vendita","sale:"+s.id,s.date);
-    save();closeSheet();render();toast("Vendita registrata");
-  };
-}
-function vPrev(){
-  var el=document.getElementById("v_prev");if(!el)return;
-  var k=v("v_it").split("|"),o=find(S.orders,k[0]);if(!o)return;
-  var it=find(o.items,k[1]),q=Math.round(num(v("v_q")))||1,p=num(v("v_p"));
-  var c=unitCost(o,it)*q,pr=p-c;
-  el.innerHTML="Ti è costato <b>"+eur(c)+"</b>"+(oOpen(o)?" (provvisorio, manca la spedizione)":"")+
-   (p>0?" · profitto <b>"+eur(pr,true)+"</b>":"");
-}
-
-/* ---- promo ---- */
-function sheetPromo(){
-  openSheet('<h3>Nuova promo</h3><p class="hint">7600 isytoken valgono circa 30€ in buoni.</p>'+
-   '<div class="f"><div><label class="fl">Persona</label><input class="fi" id="p_n" placeholder="es. Zia Angela"></div>'+
-   '<div class="f2"><div><label class="fl">Promo</label><select class="fi" id="p_t">'+
-     '<option>isybank</option><option>Revolut</option><option>Altra</option></select></div>'+
-    '<div><label class="fl">Data</label>'+dateIn("p_d")+'</div></div>'+
-   '<div class="f2"><div><label class="fl">Valore in €</label>'+
-     '<input class="fi mono" id="p_v" inputmode="decimal" placeholder="30"></div>'+
-    '<div><label class="fl">Token (se ci sono)</label>'+
-     '<input class="fi mono" id="p_k" inputmode="numeric" placeholder="7600"></div></div>'+
-   '<div><label class="fl">A che punto sta</label><div class="seg" id="p_s">'+
-     '<button data-s="invitato">Invitato</button><button data-s="registrato">Registrato</button>'+
-     '<button class="on" data-s="accreditato">Accreditato</button></div></div>'+
-   '<div class="note">Doppia quota: se la fai a un familiare che vive con te prendi sia la tua che la sua, quindi metti il valore doppio.</div>'+
-   '<p class="err" id="p_err" hidden></p>'+
-   '<button class="btn" id="p_go">Aggiungi</button></div>');
-  segify("p_s");
-  document.getElementById("p_go").onclick=function(){
-    var n=v("p_n").trim();if(!n)return showErr("p_err","Scrivi il nome della persona.");
-    S.promos.push({id:uid(),person:n,type:v("p_t"),date:v("p_d"),value:num(v("p_v")),
-      tokens:Math.round(num(v("p_k"))),status:segVal("p_s"),into:""});
-    save();closeSheet();render();toast("Promo aggiunta");
-  };
-}
-function sheetPromoDetail(id){
-  var p=find(S.promos,id);if(!p)return;
-  var h='<h3>'+esc(p.person)+'</h3><p class="hint">'+esc(p.type)+' · '+dmy(p.date)+' · '+eur(num(p.value))+
-    (p.tokens?' · '+p.tokens+' token':'')+'</p>'+
-   '<div class="f"><div><label class="fl">A che punto sta</label><div class="seg" id="d_s">'+
-    ["invitato","registrato","accreditato","convertito"].map(function(s){
-      return '<button class="'+(p.status===s?"on":"")+'" data-s="'+s+'" style="font-size:12px">'+s+'</button>';}).join("")+
-    '</div></div>'+
-   '<div><label class="fl">Convertito in</label>'+
-    '<input class="fi" id="d_into" placeholder="es. buono Amazon, benzina..." value="'+esc(p.into||"")+'"></div>'+
-   '<button class="btn" id="d_go">Salva</button>'+
-   '<button class="btn danger" data-delpromo="'+p.id+'">Elimina</button></div>';
-  openSheet(h);segify("d_s");
-  document.getElementById("d_go").onclick=function(){
-    p.status=segVal("d_s");p.into=v("d_into").trim();
-    if(p.into&&p.status!=="convertito")p.status="convertito";
-    save();closeSheet();render();toast("Aggiornato");
-  };
-}
-function segify(id){
-  var el=document.getElementById(id);if(!el)return;
-  el.onclick=function(e){var b=e.target.closest("button");if(!b)return;
-    el.querySelectorAll("button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");};
-}
-function segVal(id){var el=document.getElementById(id);var b=el&&el.querySelector("button.on");
-  return b?b.getAttribute("data-s"):"";}
-
-/* ---- gioco ---- */
-function sheetPlay(){
-  openSheet('<h3>Gioco</h3><p class="hint">Solo quanto metti dentro e quanto tiri fuori.</p>'+
-   '<div class="f"><div><label class="fl">Cosa</label><div class="seg" id="g_k">'+
-    '<button class="on" data-s="deposito">Deposito</button><button data-s="prelievo">Prelievo</button></div></div>'+
-   '<div><label class="fl">Importo</label><input class="fi mono" id="g_a" inputmode="decimal" placeholder="0,00"></div>'+
-   '<div class="f2"><div><label class="fl">Da / verso</label>'+walletSel("g_w","conto")+'</div>'+
-    '<div><label class="fl">Data</label>'+dateIn("g_d")+'</div></div>'+
-   '<div><label class="fl">Nota</label><input class="fi" id="g_n" placeholder="es. Sisal"></div>'+
-   '<p class="err" id="g_err" hidden></p>'+
-   '<button class="btn" id="g_go">Registra</button></div>');
-  segify("g_k");
-  document.getElementById("g_go").onclick=function(){
-    var a=num(v("g_a"));if(a<=0)return showErr("g_err","Metti un importo maggiore di zero.");
-    var k=segVal("g_k");
-    var p={id:uid(),kind:k,amount:a,wallet:v("g_w"),date:v("g_d"),note:v("g_n").trim()};
-    S.play.push(p);
-    post(p.wallet,k==="deposito"?-a:a,(k==="deposito"?"Deposito gioco":"Prelievo gioco")+
-      (p.note?" · "+p.note:""),"gioco","play:"+p.id,p.date);
-    save();closeSheet();render();
-    toast(k==="deposito"?"Deposito registrato":"Prelievo registrato");
-  };
-}
-
-/* ---- debiti ---- */
-function sheetDebt(){
-  openSheet('<h3>Nuovo debito</h3><p class="hint">Klarna, rate, soldi che devi restituire.</p>'+
-   '<div class="f"><div><label class="fl">Nome</label><input class="fi" id="k_n" placeholder="es. Klarna kway"></div>'+
-   '<div class="f2"><div><label class="fl">Totale</label>'+
-    '<input class="fi mono" id="k_t" inputmode="decimal" placeholder="0,00"></div>'+
-    '<div><label class="fl">Ancora da pagare</label>'+
-    '<input class="fi mono" id="k_l" inputmode="decimal" placeholder="0,00"></div></div>'+
-   '<p class="err" id="k_err" hidden></p>'+
-   '<button class="btn" id="k_go">Aggiungi</button></div>');
-  document.getElementById("k_go").onclick=function(){
-    var n=v("k_n").trim();if(!n)return showErr("k_err","Dai un nome al debito.");
-    var t=num(v("k_t")),l=num(v("k_l"))||t;
-    S.debts.push({id:uid(),name:n,total:t||l,left:l});
-    save();closeSheet();render();toast("Debito aggiunto");
-  };
-}
-function sheetPay(id){
-  var d=find(S.debts,id);if(!d)return;
-  openSheet('<h3>'+esc(d.name)+'</h3><p class="hint">Restano '+eur(num(d.left))+'.</p>'+
-   '<div class="f"><div><label class="fl">Rata pagata</label>'+
-   '<input class="fi mono" id="r_a" inputmode="decimal" placeholder="0,00"></div>'+
-   '<div><label class="fl">Pagata da</label>'+walletSel("r_w","conto")+'</div>'+
-   '<button class="btn" id="r_go">Registra pagamento</button></div>');
-  document.getElementById("r_go").onclick=function(){
-    var a=num(v("r_a"));if(a<=0)return toast("Metti l'importo della rata");
-    d.left=Math.max(0,num(d.left)-a);
-    post(v("r_w"),-a,"Rata "+d.name,"rata",null,today());
-    save();closeSheet();render();toast("Rata registrata");
-  };
-}
-
-/* ============================ EVENTI ============================ */
-document.getElementById("fab").onclick=sheetAdd;
-document.getElementById("scrim").onclick=closeSheet;
-
-var SHEETS={spesa:function(){sheetFlow("spesa");},entrata:function(){sheetFlow("entrata");},
-  order:sheetOrder,sale:function(){sheetSale();},promo:sheetPromo,play:sheetPlay,debt:sheetDebt};
-
-document.addEventListener("click",function(e){
-  var t=e.target;
-  var tab=t.closest("[data-tab]");if(tab)return go(tab.getAttribute("data-tab"));
-  var g=t.closest("[data-go]");if(g)return go(g.getAttribute("data-go"));
-  var sh=t.closest("[data-sheet]");if(sh){var f=SHEETS[sh.getAttribute("data-sheet")];if(f)f();return;}
-  var adj=t.closest("[data-adj]");if(adj)return sheetAdjust(adj.getAttribute("data-adj"));
-  var od=t.closest("[data-order]");if(od)return sheetOrderDetail(od.getAttribute("data-order"));
-  var sl=t.closest("[data-sell]");if(sl){closeSheet();setTimeout(function(){sheetSale(sl.getAttribute("data-sell"));},280);return;}
-  var pr=t.closest("[data-promo]");if(pr)return sheetPromoDetail(pr.getAttribute("data-promo"));
-  var py=t.closest("[data-pay]");if(py)return sheetPay(py.getAttribute("data-pay"));
-
-  var dl=t.closest("[data-del-led]");
-  if(dl){var id=dl.getAttribute("data-del-led");var en=null;
-    for(var i=0;i<S.ledger.length;i++)if(S.ledger[i].id===id)en=S.ledger[i];
-    if(!en)return;
-    if(en.ref)return toast("Eliminalo dalla sua sezione (ordine, vendita o gioco)");
-    if(confirm("Eliminare «"+en.l+"»?")){S.ledger=S.ledger.filter(function(x){return x.id!==id;});
-      save();render();toast("Eliminato");}
-    return;}
-  var ds=t.closest("[data-del-sale]");
-  if(ds&&confirm("Eliminare questa vendita? Il pezzo torna in magazzino.")){
-    var sid=ds.getAttribute("data-del-sale");
-    S.sales=S.sales.filter(function(x){return x.id!==sid;});unpost("sale:"+sid);
-    save();render();toast("Vendita eliminata");return;}
-  var dp=t.closest("[data-del-play]");
-  if(dp&&confirm("Eliminare questo movimento di gioco?")){
-    var pid=dp.getAttribute("data-del-play");
-    S.play=S.play.filter(function(x){return x.id!==pid;});unpost("play:"+pid);
-    save();render();toast("Eliminato");return;}
-  var dor=t.closest("[data-delorder]");
-  if(dor&&confirm("Eliminare l'ordine e tutte le sue vendite?")){
-    var oid=dor.getAttribute("data-delorder");
-    S.sales.filter(function(s){return s.oid===oid;}).forEach(function(s){unpost("sale:"+s.id);});
-    S.sales=S.sales.filter(function(s){return s.oid!==oid;});
-    S.orders=S.orders.filter(function(o){return o.id!==oid;});
-    unpost("order:"+oid);unpost("order2:"+oid);
-    save();closeSheet();render();toast("Ordine eliminato");return;}
-  var dpr=t.closest("[data-delpromo]");
-  if(dpr&&confirm("Eliminare questa promo?")){
-    var prid=dpr.getAttribute("data-delpromo");
-    S.promos=S.promos.filter(function(x){return x.id!==prid;});
-    save();closeSheet();render();toast("Promo eliminata");return;}
-  var dd=t.closest("[data-deldebt]");
-  if(dd&&confirm("Eliminare questo debito?")){
-    var did=dd.getAttribute("data-deldebt");
-    S.debts=S.debts.filter(function(x){return x.id!==did;});save();render();toast("Debito eliminato");return;}
-
-  if(t.id==="bkCopy"){
-    var ta=document.getElementById("bkOut");
-    if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(ta.value).then(function(){toast("Backup copiato: incollalo nelle Note");},
-        function(){ta.select();toast("Tieni premuto sul testo e copia");});
-    }else{ta.select();ta.setSelectionRange(0,999999);toast("Tieni premuto sul testo e copia");}
-    return;}
-  if(t.id==="bkRestore"){
-    var raw=document.getElementById("bkIn").value.trim();
-    if(!raw)return toast("Incolla prima il backup");
-    try{var d=JSON.parse(raw);if(!d||!d.ledger)throw 0;
-      if(confirm("Sostituire tutti i dati attuali con questo backup?")){
-        S=d;for(var k in blank)if(!(k in S))S[k]=Array.isArray(blank[k])?[]:blank[k];
-        save();render();toast("Dati ripristinati");}
-    }catch(err){toast("Questo testo non è un backup valido");}
-    return;}
-  if(t.id==="wipe"){
-    if(confirm("Cancellare davvero tutto? Non si torna indietro.")){
-      S=JSON.parse(JSON.stringify(blank));save();go("home");toast("Tutto cancellato");}
-    return;}
+// Lista per Farcita(+): tutto gratis tranne Bresaola e Bufala a €3
+const EXTRAS_FARCITA=EXTRAS_MAX.map(e=>{
+  if(e.n==='Bresaola'||e.n==='Bufala')return {...e,p:3};
+  return {...e,p:0};
 });
-document.addEventListener("keydown",function(e){if(e.key==="Escape")closeSheet();});
-render();
-</script>
+let order={type:'asporto',items:[]};
+let openOrders=JSON.parse(localStorage.getItem('bb_ord')||'[]');
+let completedOrders=JSON.parse(localStorage.getItem('bb_comp')||'[]');
+let clienti=JSON.parse(localStorage.getItem('bb_cli')||'[]');
+let view='new';
+let pendProd=null;
+let selEx=[],selRm=[];
+let payId=null;
+let editId=null;
+let orMode=null;
 
+const fmt=n=>'€ '+n.toFixed(2).replace('.',',');
+
+// CLOCK
+setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),1000);
+document.getElementById('clock').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+
+// TOAST
+function toast(msg,type='ok',ms=3200){
+  const tc=document.getElementById('toasts');
+  const d=document.createElement('div');
+  d.className='toast '+type;
+  d.innerHTML=`<span>${type==='ok'?'✅':'❌'}</span><span style="flex:1">${msg}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,0.6);cursor:pointer;font-size:16px;">✕</button>`;
+  tc.appendChild(d);
+  setTimeout(()=>{d.classList.add('hide');setTimeout(()=>d.remove(),300);},ms);
+}
+
+// MENU
+function renderCats(){
+  const cats=Object.keys(MENU);
+  document.getElementById('ctabs').innerHTML=cats.map((c,i)=>`<button class="ctab${i===0?' active':''}" onclick="selCat('${c}',this)">${c}</button>`).join('');
+  renderProds(cats[0]);
+}
+function selCat(cat,btn){
+  document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderProds(cat);
+}
+function renderProds(cat){
+  document.getElementById('pgrid').innerHTML=MENU[cat].map(p=>{
+    if(p.separatore){
+      return `<div style="grid-column:1/-1;background:rgba(245,216,0,0.1);border:1px solid rgba(245,216,0,0.3);border-radius:8px;padding:8px;text-align:center;font-size:13px;font-weight:900;color:var(--g);pointer-events:none;">${p.n}</div>`;
+    }
+    if(p.farcitaPlus){
+      return `<button class="pbtn" onclick="addProd('${cat}','${p.n.replace(/'/g,"\\'")}',${p.p})" style="background:linear-gradient(145deg,rgba(180,150,0,0.8),rgba(140,110,0,0.9));border-color:var(--g);">
+        <div class="pn" style="color:#fff;">✚ ${p.n}</div>
+        <div class="pp">${fmt(p.p)}</div>
+      </button>`;
+    }
+    if(p.metaMeta){
+      return `<button class="pbtn" onclick="addProd('${cat}','${p.n.replace(/'/g,"\\'")}',${p.p})" style="background:linear-gradient(145deg,rgba(180,100,0,0.8),rgba(140,70,0,0.9));border-color:#f39c12;">
+        <div class="pn" style="color:#fff;">⬡ ${p.n}</div>
+        <div class="pp">${fmt(p.p)}</div>
+      </button>`;
+    }
+    return `<button class="pbtn" onclick="addProd('${cat}','${p.n.replace(/'/g,"\\'")}',${p.p})">
+      <div class="pn">${p.n}</div>
+      <div class="pp">${fmt(p.p)}</div>
+    </button>`;
+  }).join('');
+}
+
+function addProd(cat,name,price){
+  const isPizza=cat==='Pizze Tonde'||cat==='Pizze Max'||cat==='Pizze Mezzo Metro';
+  if(isPizza){
+    const prod=MENU[cat].find(p=>p.n===name);
+    const isMax=prod&&prod.extraMax;
+    // Metà/metà
+    if(prod&&prod.metaMeta){
+      openMetaMeta(name,price,isMax);
+      return;
+    }
+    // Farcita+ : apre modal con lista Max, prezzi smart (4 gratis, dal 5° €2, bresaola/bufala €3)
+    if(prod&&prod.farcitaPlus){
+      pendProd={name,price,ing:'',isMax:true,farcitaPlus:true,excl:[]};
+      openEx(name,'',true,[],false,true);
+      return;
+    }
+    // Pizza normale
+    pendProd={name,price,ing:prod?prod.ing:'',isMax,excl:prod?prod.excl||[]:[]};
+    openEx(name,prod?prod.ing:'',isMax,prod?prod.excl||[]:[]);
+  } else {
+    pushItem(name,price,[],[]);
+  }
+}
+
+function pushItem(name,price,extras,removes,note='',isMax=false){
+  const list=isMax?EXTRAS_MAX:EXTRAS;
+  const ep=extras.reduce((s,e)=>{const ex=list.find(x=>x.n===e);return s+(ex?ex.p:isMax?2:1);},0);
+  const fp=+(price+ep).toFixed(2);
+  const ex=order.items.find(i=>i.name===name&&JSON.stringify(i.extras)===JSON.stringify(extras)&&JSON.stringify(i.removes)===JSON.stringify(removes)&&i.note===note);
+  if(ex){ex.qty++;}else{order.items.push({name,price:fp,extras,removes,note,qty:1});}
+  renderItems();
+}
+
+function renderItems(){
+  const el=document.getElementById('oitems');
+  if(!order.items.length){
+    el.innerHTML='<div class="empty"><div class="big">🍕</div><p>Seleziona prodotti dal menu</p></div>';
+    document.getElementById('totval').textContent=fmt(0);
+    return;
+  }
+  el.innerHTML=order.items.map((it,i)=>`
+    <div class="oitem">
+      <div style="flex:1">
+        <div class="iname">${it.name}</div>
+        ${(it.extras||[]).length?`<div class="inote-p">➕ ${it.extras.join(', ')}</div>`:''}
+        ${(it.removes||[]).length?`<div class="inote-m">➖ ${it.removes.join(', ')}</div>`:''}
+        ${it.note?`<div class="inote-t">📝 ${it.note}</div>`:''}
+      </div>
+      <div class="qrow">
+        <button class="qbtn" onclick="chgQ(${i},-1)">−</button>
+        <span class="qnum">${it.qty}</span>
+        <button class="qbtn" onclick="chgQ(${i},1)">+</button>
+      </div>
+      <div class="iprice">${fmt(it.price*it.qty)}</div>
+      <button onclick="editCartItem(${i})" style="background:rgba(52,152,219,0.3);border:1px solid #3498db;color:#3498db;border-radius:6px;padding:4px 7px;cursor:pointer;font-size:13px;margin-right:3px;">✏️</button>
+      <button class="idel" onclick="delI(${i})">✕</button>
+    </div>`).join('');
+  updTotal();
+}
+
+function chgQ(i,d){order.items[i].qty+=d;if(order.items[i].qty<=0)order.items.splice(i,1);renderItems();}
+
+function editCartItem(idx){
+  const it=order.items[idx];
+  if(!it)return;
+
+  // Trova la categoria del prodotto
+  let cat=null;
+  for(const c of Object.keys(MENU)){
+    if(MENU[c].find(p=>p.n===it.name)){cat=c;break;}
+  }
+  const isPizza=cat&&(cat==='Pizze Tonde'||cat==='Pizze Max'||cat==='Pizze Mezzo Metro');
+  const isMetaMeta=it.note&&it.note.includes("Meta':");
+
+  if(isMetaMeta){
+    const prod=cat?MENU[cat].find(p=>p.n===it.name):null;
+    window._editCartIdx=idx;
+    window._editMode=true;
+    metaMetaName=it.name;
+    metaMetaPrice=prod?prod.p:it.price;
+    metaMetaIsMax=prod?prod.extraMax:true;
+    metaMetaGusti={prima:[],seconda:[]};
+    metaMetaExtras={prima:[],seconda:[]};
+
+    // Reset prima di ricostruire
+    metaMetaGusti={prima:[],seconda:[]};
+    metaMetaExtras={prima:[],seconda:[]};
+
+    // Ricostruisci da nota
+    const nota=it.note||'';
+    const dashIdx=nota.indexOf("Meta':");
+    let notaLibera='';
+    if(dashIdx>0)notaLibera=nota.substring(0,dashIdx).replace(/ - $/,'').trim();
+    const metaPart=dashIdx>=0?nota.substring(dashIdx):'';
+    const halves=metaPart.split(' / ');
+    const gustiValidi=MENU['Pizze Tonde'].map(p=>p.n);
+    halves.forEach((h,hi)=>{
+      const lato=hi===0?'prima':'seconda';
+      const content=h.replace(/Meta':/,'').trim();
+      const parts=content.split(' + ');
+      const primaParte=parts[0].trim();
+      const restoParte=parts.slice(1).join(' + ').trim();
+      // Prima parte può contenere "Gusto e Gusto2" oppure "Extra1, Extra2"
+      const possibiliGusti=primaParte.split(' e ').map(g=>g.trim());
+      const gustiTrovati=possibiliGusti.filter(g=>gustiValidi.includes(g));
+      const nonGusti=possibiliGusti.filter(g=>!gustiValidi.includes(g));
+      metaMetaGusti[lato]=gustiTrovati;
+      // Extra = nonGusti (già splittati per ' e ') + restoParte (splittato per ', ')
+      const tuttiExtra=[];
+      nonGusti.forEach(ng=>{
+        // Potrebbe contenere virgole: "Cotto, Funghi"
+        ng.split(', ').map(e=>e.trim()).filter(Boolean).forEach(e=>tuttiExtra.push(e));
+      });
+      if(restoParte){
+        restoParte.split(', ').map(e=>e.trim()).filter(Boolean).forEach(e=>tuttiExtra.push(e));
+      }
+      metaMetaExtras[lato]=tuttiExtra.filter(Boolean);
+    });
+
+    // Apri modal — skipReset=true, la pre-selezione avviene dentro openMetaMeta
+    openMetaMeta(it.name,metaMetaPrice,metaMetaIsMax,true);
+    document.getElementById('mmeta-note').value=notaLibera;
+    return;
+  }
+
+  if(isPizza){
+    const prod=MENU[cat].find(p=>p.n===it.name);
+    const isMax=prod&&prod.extraMax;
+    window._editCartIdx=idx;
+    window._editMode=true;
+    pendProd={name:it.name,price:prod?prod.p:it.price,ing:prod?prod.ing:'',isMax,excl:[],farcitaPlus:prod?prod.farcitaPlus:false};
+    selEx=[...it.extras];
+    selRm=[...it.removes];
+    openEx(it.name,prod?prod.ing:'',isMax,[],true,pendProd.farcitaPlus||false);
+    document.getElementById('mex-note').value=it.note||'';
+  } else {
+    const nota=prompt('Modifica nota per '+it.name+':',it.note||'');
+    if(nota!==null){order.items[idx].note=nota;renderItems();}
+  }
+}
+function delI(i){order.items.splice(i,1);renderItems();}
+
+function updTotal(){
+  document.getElementById('totval').textContent=fmt(getTotal());
+  document.getElementById('delrow').style.display=order.type==='domicilio'?'flex':'none';
+  if(order.type==='domicilio'){
+    document.getElementById('delrow').innerHTML=`<span>🛵 Consegna</span><span style="color:var(--g)">${fmt(currentDeliveryCost)}</span>`;
+  }
+}
+
+function addCoperto(){
+  const ex=order.items.find(i=>i.name==='Coperto');
+  if(ex){ex.qty++;}
+  else{order.items.push({name:'Coperto',price:2,extras:[],removes:[],note:'',qty:1});}
+  renderItems();
+  toast('Coperto aggiunto','ok',1500);
+}
+
+// TYPE
+function setType(t){
+  order.type=t;
+  document.getElementById('ta').classList.toggle('active',t==='asporto');
+  document.getElementById('td').classList.toggle('active',t==='domicilio');
+  document.getElementById('domfields').style.display=t==='domicilio'?'block':'none';
+  if(t==='domicilio'){
+    currentDeliveryCost=0; // reset prima così force funziona
+    setDelivery(DELIVERY_COST,true);
+  }
+  updTotal();
+}
+
+// ORARIO
+function setOr(mode){
+  orMode=mode;
+  const ap=document.getElementById('orbtn-ap');
+  const ora=document.getElementById('orbtn-ora');
+  const inp=document.getElementById('orario-input');
+  if(mode==='ap'){
+    ap.classList.add('active');ora.classList.remove('active');
+    inp.style.display='none';inp.value='';
+  } else {
+    ora.classList.add('active');ap.classList.remove('active');
+    inp.style.display='block';inp.focus();
+  }
+}
+function getOrVal(){
+  if(orMode==='ap')return 'Appena possibile';
+  if(orMode==='ora')return document.getElementById('orario-input').value.trim();
+  return '';
+}
+function resetOr(){
+  orMode=null;
+  document.getElementById('orbtn-ap').classList.remove('active');
+  document.getElementById('orbtn-ora').classList.remove('active');
+  document.getElementById('orario-input').style.display='none';
+  document.getElementById('orario-input').value='';
+}
+
+// CLIENTI
+function onCog(v){
+  const sb=document.getElementById('sugbox');
+  if(v.length<2){sb.style.display='none';return;}
+  const m=clienti.filter(c=>c.cognome.toLowerCase().includes(v.toLowerCase()));
+  if(!m.length){sb.style.display='none';return;}
+  sb.style.display='block';
+  sb.innerHTML=m.slice(0,5).map(c=>`
+    <div class="sugitem" onclick="selCli('${c.cognome.replace(/'/g,"\\'")}','${(c.telefono||'').replace(/'/g,"\\'")}','${(c.indirizzo||'').replace(/'/g,"\\'")}')">
+      <strong>${c.cognome}</strong>${c.telefono?' · '+c.telefono:''}${c.indirizzo?' · '+c.indirizzo:''}
+    </div>`).join('');
+}
+function selCli(cog,tel,ind){
+  document.getElementById('cognome').value=cog;
+  if(order.type==='domicilio'){
+    if(tel)document.getElementById('telefono').value=tel;
+    if(ind)document.getElementById('indirizzo').value=ind;
+  }
+  document.getElementById('sugbox').style.display='none';
+}
+function saveCli(){
+  const cog=document.getElementById('cognome').value.trim();
+  if(!cog)return;
+  const tel=order.type==='domicilio'?(document.getElementById('telefono').value.trim()):'';
+  const ind=order.type==='domicilio'?(document.getElementById('indirizzo').value.trim()):'';
+  const ex=clienti.find(c=>c.cognome.toLowerCase()===cog.toLowerCase());
+  if(ex){if(tel)ex.telefono=tel;if(ind)ex.indirizzo=ind;}
+  else clienti.push({cognome:cog,telefono:tel,indirizzo:ind});
+  localStorage.setItem('bb_cli',JSON.stringify(clienti));
+}
+
+// CONFIRM ORDER
+function confirmOrder(){
+  const cog=document.getElementById('cognome').value.trim();
+  if(!cog){toast('Inserisci il cognome del cliente!','err');return;}
+  if(!order.items.length){toast('Aggiungi almeno un prodotto!','err');return;}
+  const orVal=getOrVal();
+  if(!orVal){toast('Seleziona l\'orario: Appena possibile oppure inserisci l\'orario!','err');return;}
+  if(orMode==='ora'&&!document.getElementById('orario-input').value.trim()){toast('Inserisci l\'orario!','err');return;}
+  if(order.type==='domicilio'){
+    if(!document.getElementById('telefono').value.trim()){toast('Inserisci il numero di telefono!','err');return;}
+    if(!document.getElementById('indirizzo').value.trim()){toast('Inserisci l\'indirizzo di consegna!','err');return;}
+  }
+  order.cognome=cog;
+  order.telefono=order.type==='domicilio'?document.getElementById('telefono').value.trim():'';
+  order.orario=orVal;
+  order.indirizzo=order.type==='domicilio'?document.getElementById('indirizzo').value.trim():'';
+  order.total=getTotal();
+  order.time=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  order.date=new Date().toLocaleDateString('it-IT');
+  saveCli();
+  if(editId!==null){
+    const idx=openOrders.findIndex(o=>o.id===editId);
+    if(idx!==-1){order.id=editId;openOrders[idx]={...order};}
+    editId=null;
+  } else {
+    order.id=Date.now();
+    openOrders.push({...order});
+  }
+  saveOrders();
+  updCount();
+  printComanda({...order});
+  clearOrder();
+  toast('Ordine confermato! Comanda inviata al pizzaiolo.','ok',4000);
+}
+
+function clearOrder(){
+  order={type:order.type,items:[]};
+  editId=null;
+  ['cognome','telefono','indirizzo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('sugbox').style.display='none';
+  resetOr();
+  renderItems();
+}
+
+function saveOrders(){localStorage.setItem('bb_ord',JSON.stringify(openOrders));}
+
+// SWITCH VIEW
+function switchView(v){
+  view=v;
+  document.getElementById('mpanel').style.display=v==='new'?'':'none';
+  document.getElementById('opanel').style.display=v==='new'?'':'none';
+  document.getElementById('oview').style.display=v==='open'?'block':'none';
+  document.getElementById('cview').style.display=v==='comp'?'block':'none';
+  document.getElementById('sview').style.display=v==='stats'?'block':'none';
+  document.querySelectorAll('.nbtn').forEach((b,i)=>{
+    b.classList.toggle('active',(i===0&&v==='new')||(i===1&&v==='open')||(i===2&&v==='comp')||(i===3&&v==='stats'));
+  });
+  if(v==='open')renderOpen();
+  if(v==='comp')renderCompleted();
+  if(v==='stats')renderStats();
+}
+
+function updCount(){
+  const n=openOrders.length;
+  document.getElementById('ocount').textContent=n?`(${n})`:'';
+  const c=completedOrders.length;
+  document.getElementById('ccount').textContent=c?`(${c})`:'';
+}
+
+// COMPLETED ORDERS
+function renderCompleted(){
+  const grid=document.getElementById('cgrid');
+  const totNetto=completedOrders.reduce((s,o)=>s+(o.totalePagato||o.total||0),0);
+  document.getElementById('cinfo').textContent=`${completedOrders.length} ordini · Incasso netto: ${fmt(totNetto)}`;
+  if(!completedOrders.length){
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="big">✅</div><p>Nessun ordine completato stasera</p></div>';
+    return;
+  }
+  const rev=[...completedOrders].reverse();
+  grid.innerHTML=rev.map((o,i)=>{
+    const realIdx=completedOrders.length-1-i;
+    return `
+    <div class="ocard" style="border-color:#27ae60;opacity:0.9;position:relative;">
+      <div style="position:absolute;top:6px;right:6px;display:flex;gap:4px;">
+        <button onclick="reprintOrder(${realIdx})" title="Ristampa comanda"
+          style="width:24px;height:24px;background:rgba(39,174,96,0.4);border:1px solid #27ae60;border-radius:50%;color:#fff;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0;">🖨</button>
+        <button onclick="deleteCompleted(${realIdx})" title="Elimina ordine"
+          style="width:24px;height:24px;background:#e74c3c;border:none;border-radius:50%;color:#fff;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;padding:0;">🗑</button>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;padding-right:56px;">
+        <div class="ocname">${o.cognome}</div>
+        <span class="octype ${o.type}">${o.type==='domicilio'?'🛵 Dom':'🥡 Asp'}</span>
+      </div>
+      ${o.orario?`<div style="font-size:12px;color:var(--g);margin-bottom:3px;">⏰ ${o.orario}</div>`:''}
+      <div class="ocitems">${o.items.map(i=>{
+        let s=`${i.qty}x ${i.name}`;
+        if(i.extras&&i.extras.length)s+=` <span style="color:rgba(100,200,100,0.8);font-size:10px;">+${i.extras.join(', ')}</span>`;
+        if(i.note)s+=` <span style="color:rgba(255,200,100,0.8);font-size:10px;">📝${i.note}</span>`;
+        return s;
+      }).join('<br>')}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+        <span class="octot">${fmt(o.total)}</span>
+        <span class="octime">Pagato: ${o.paidTime||o.time}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function reprintOrder(idx){
+  const o=completedOrders[idx];
+  if(!o)return;
+  printViaRawBT(o);
+  toast('Ristampa inviata! 🖨️','ok',2000);
+}
+
+function deleteCompleted(idx){
+  idx=parseInt(idx);
+  if(isNaN(idx)||idx<0||idx>=completedOrders.length){toast('Ordine non trovato','err');return;}
+  completedOrders.splice(idx,1);
+  localStorage.setItem('bb_comp',JSON.stringify(completedOrders));
+  updCount();
+  renderCompleted();
+  if(view==='stats')renderStats();
+  toast('Ordine eliminato','ok',2000);
+}
+
+function resetCompleted(){
+  if(!completedOrders.length){toast('Nessun ordine da azzerare','err');return;}
+  const totNetto=completedOrders.reduce((s,o)=>s+(o.totalePagato||o.total||0),0);
+  if(!confirm(`Sei sicuro di voler azzerare la serata?\nIncasso netto: ${fmt(totNetto)}\nQuesta azione non si può annullare!`))return;
+  completedOrders=[];
+  localStorage.setItem('bb_comp',JSON.stringify(completedOrders));
+  updCount();
+  renderCompleted();
+  toast(`Serata azzerata! Incasso netto: ${fmt(totNetto)}`,'ok',5000);
+}
+
+function renderStats(){
+  const el=document.getElementById('stats-content');
+  document.getElementById('stats-date').textContent=new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+  if(!completedOrders.length){
+    el.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="big">📊</div><p>Nessun ordine completato stasera</p></div>';
+    return;
+  }
+  const tot=completedOrders.reduce((s,o)=>s+(o.total||0),0); // lordo = prima degli sconti
+  const cash=completedOrders.filter(o=>o.payMethod==='cash');
+  const card=completedOrders.filter(o=>o.payMethod==='card');
+  const asporto=completedOrders.filter(o=>o.type==='asporto');
+  const domicilio=completedOrders.filter(o=>o.type==='domicilio');
+  const totCash=cash.reduce((s,o)=>s+(o.totalePagato||o.total||0),0); // reale contanti
+  const totCard=card.reduce((s,o)=>s+(o.totalePagato||o.total||0),0); // reale carta
+  const totSconti=completedOrders.reduce((s,o)=>s+(o.sconto||0),0);
+  const nSconti=completedOrders.filter(o=>o.sconto>0).length;
+  const incassoReale=totCash+totCard; // reale = contanti reali + carta reali
+  // Ora più affollata — usa orario consegna se disponibile, altrimenti ora creazione ordine
+  const byHour={};
+  completedOrders.forEach(o=>{
+    let t=null;
+    if(o.orario&&o.orario!=='Appena possibile'){
+      t=o.orario.replace('.',':');
+    } else {
+      t=o.time; // ora in cui è stata presa la comanda
+    }
+    if(t){
+      const h=t.split(':')[0].trim();
+      if(h&&!isNaN(h))byHour[h]=(byHour[h]||0)+1;
+    }
+  });
+  const peakHour=Object.entries(byHour).sort((a,b)=>b[1]-a[1])[0];
+
+  // Conteggio pizze
+  const pizzeCount=completedOrders.reduce((s,o)=>s+o.items.filter(i=>{
+    for(const cat of ['Pizze Tonde','Pizze Max','Pizze Mezzo Metro']){
+      if(MENU[cat]&&MENU[cat].find(p=>p.n===i.name))return true;
+    }
+    return false;
+  }).reduce((ss,i)=>ss+i.qty,0),0);
+  const prodCount={};
+  completedOrders.forEach(o=>o.items.forEach(i=>{prodCount[i.name]=(prodCount[i.name]||0)+i.qty;}));
+  const topProds=Object.entries(prodCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const sc=(v,label,sub,color='var(--g)')=>`
+    <div style="background:linear-gradient(145deg,rgba(45,90,27,0.6),rgba(26,58,26,0.8));border:2px solid ${color};border-radius:14px;padding:16px;">
+      <div style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:700;text-transform:uppercase;margin-bottom:6px;">${label}</div>
+      <div style="font-family:'Fredoka One',cursive;font-size:26px;color:${color};">${v}</div>
+      ${sub?`<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;">${sub}</div>`:''}
+    </div>`;
+  el.innerHTML=`
+    ${sc(completedOrders.length,'🧾 Ordini totali','Completati stasera')}
+    ${sc(fmt(tot),'💰 Incasso lordo','Prima degli sconti')}
+    ${sc(fmt(incassoReale),'💵 Incasso reale','Dopo sconti')}
+    ${nSconti>0?sc(nSconti+' sconti · '+fmt(totSconti),'🏷️ Sconti applicati','Totale perso','#e74c3c'):''}
+    ${sc(cash.length+' ord · '+fmt(totCash),'💵 Contanti','')}
+    ${sc(card.length+' ord · '+fmt(totCard),'💳 Carta','','#3498db')}
+    ${sc(asporto.length+' asporto / '+domicilio.length+' dom','🛵 Tipo ordini','')}
+    ${peakHour?sc(peakHour[0]+':00 — '+peakHour[1]+' ordini','⏰ Ora più affollata','Asporto + domicilio'):''}
+    ${sc(pizzeCount+'  🍕','🍕 Pizze sfornate stasera','')}
+    <div style="background:linear-gradient(145deg,rgba(45,90,27,0.6),rgba(26,58,26,0.8));border:2px solid var(--vc);border-radius:14px;padding:16px;grid-column:1/-1">
+      <div style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:700;text-transform:uppercase;margin-bottom:10px;">🍕 Prodotti più venduti stasera</div>
+      ${topProds.map((p,i)=>`
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+          <span style="font-size:14px;font-weight:700;">${i+1}. ${p[0]}</span>
+          <span style="font-family:'Fredoka One',cursive;color:var(--g);font-size:18px;">${p[1]}x</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+function renderOpen(){
+  const tot=openOrders.reduce((s,o)=>s+(o.total||0),0);
+  document.getElementById('oinfo').textContent=`${openOrders.length} ordini · Totale: ${fmt(tot)}`;
+
+  const sorted=[...openOrders].sort((a,b)=>{
+    const getMin=o=>{
+      if(!o.orario||o.orario==='Appena possibile')return -1; // in cima
+      const norm=o.orario.replace('.',':');
+      const parts=norm.split(':');
+      return parseInt(parts[0]||0)*60+parseInt(parts[1]||0);
+    };
+    return getMin(a)-getMin(b);
+  });
+
+  const asporto=sorted.filter(o=>o.type==='asporto');
+  const domicilio=sorted.filter(o=>o.type==='domicilio');
+
+  document.getElementById('ocount-asp').textContent=asporto.length?`(${asporto.length})`:'';
+  document.getElementById('ocount-dom').textContent=domicilio.length?`(${domicilio.length})`:'';
+
+  const cardHtml=o=>`
+    <div class="ocard ${o.type}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;">
+        <div class="ocname">${o.cognome}</div>
+        ${o.orario?`<div style="font-size:16px;font-weight:900;color:var(--g);">⏰ ${o.orario}</div>`:''}
+      </div>
+      ${o.indirizzo?`<div style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.85);margin-bottom:4px;">📍 ${o.indirizzo}</div>`:''}
+      <div class="ocitems">${o.items.map(i=>`${i.qty}x ${i.name}${i.extras.length?' [+'+i.extras.join(',')+']':''}${i.removes.length?' [-'+i.removes.join(',')+']':''}`).join('<br>')}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0 8px;">
+        <span class="octot">${fmt(o.total)}</span>
+        <span class="octime">Preso: ${o.time}</span>
+      </div>
+      <button class="ocbtn-pay" onclick="openPay(${o.id})">💰 Paga</button>
+      <div class="ocacts" style="margin-top:6px;">
+        <button class="ocico edit" onclick="editOrder(${o.id})" title="Modifica">✏️</button>
+        <button class="ocico print" onclick="printComanda(openOrders.find(x=>x.id===${o.id}))" title="Stampa">🖨️</button>
+        <button class="ocico cancel" onclick="if(confirm('Annullare ordine di ${o.cognome}?'))deleteOrder(${o.id})" title="Annulla ordine">🗑️</button>
+      </div>
+    </div>`;
+
+  const aspGrid=document.getElementById('ogrid-asp');
+  const domGrid=document.getElementById('ogrid-dom');
+
+  aspGrid.innerHTML=asporto.length
+    ?asporto.map(cardHtml).join('')
+    :'<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:10px;">Nessun ordine asporto</div>';
+
+  domGrid.innerHTML=domicilio.length
+    ?domicilio.map(cardHtml).join('')
+    :'<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:10px;">Nessun ordine domicilio</div>';
+
+  // Nascondi sezione se vuota del tutto
+  document.getElementById('osection-asporto').style.display=asporto.length||!domicilio.length?'block':'block';
+  document.getElementById('osection-domicilio').style.display='block';
+}
+
+function selEditTab(tab,btn){
+  document.getElementById('etab-items-panel').style.display=tab==='items'?'block':'none';
+  document.getElementById('etab-add-panel').style.display=tab==='add'?'block':'none';
+  document.getElementById('etab-items').style.background=tab==='items'?'var(--g)':'rgba(0,0,0,0.3)';
+  document.getElementById('etab-items').style.color=tab==='items'?'var(--vs)':'rgba(255,255,255,0.6)';
+  document.getElementById('etab-add').style.background=tab==='add'?'var(--g)':'rgba(0,0,0,0.3)';
+  document.getElementById('etab-add').style.color=tab==='add'?'var(--vs)':'rgba(255,255,255,0.6)';
+  if(tab==='add')renderEditCats();
+}
+
+function renderEditCats(){
+  const cats=Object.keys(MENU);
+  document.getElementById('edit-cat-tabs').innerHTML=cats.map((c,i)=>`
+    <button onclick="renderEditProds('${c}',this)"
+      style="padding:6px 12px;border-radius:16px;border:2px solid var(--vc);background:${i===0?'var(--r)':'rgba(0,0,0,0.4)'};color:${i===0?'var(--g)':'#ccc'};cursor:pointer;font-size:11px;font-weight:900;">${c}</button>`).join('');
+  renderEditProds(cats[0],document.getElementById('edit-cat-tabs').firstChild);
+}
+
+function renderEditProds(cat,btn){
+  document.querySelectorAll('#edit-cat-tabs button').forEach(b=>{b.style.background='rgba(0,0,0,0.4)';b.style.color='#ccc';b.style.borderColor='var(--vc)';});
+  if(btn){btn.style.background='var(--r)';btn.style.color='var(--g)';btn.style.borderColor='var(--g)';}
+  document.getElementById('edit-prod-grid').innerHTML=MENU[cat].map(p=>`
+    <button onclick="editAddProduct('${p.n.replace(/'/g,"\\'")}',${p.p})"
+      style="background:linear-gradient(145deg,rgba(45,90,27,0.8),rgba(26,58,26,0.9));border:2px solid var(--vc);color:#fff;padding:10px 8px;border-radius:10px;cursor:pointer;text-align:center;">
+      <div style="font-size:12px;font-weight:900;">${p.n}</div>
+      <div style="font-size:14px;color:var(--g);font-weight:900;margin-top:4px;">${fmt(p.p)}</div>
+    </button>`).join('');
+}
+
+function editAddProduct(name,price){
+  const o=openOrders.find(x=>x.id===window._editId);
+  if(!o)return;
+  const ex=o.items.find(i=>i.name===name&&!i.extras.length&&!i.removes.length&&!i.note);
+  if(ex){ex.qty++;}
+  else{o.items.push({name,price,extras:[],removes:[],note:'',qty:1});}
+  o.total=o.items.reduce((s,i)=>s+i.price*i.qty,0);
+  if(o.type==='domicilio')o.total+=DELIVERY_COST;
+  o.total=+o.total.toFixed(2);
+  saveOrders();
+  renderEditItems(o);
+  toast(name+' aggiunto!','ok',2000);
+}
+
+function renderEditItems(o){
+  document.getElementById('medit-items').innerHTML=o.items.map((it,i)=>`
+    <div style="display:flex;align-items:center;background:rgba(45,90,27,0.25);border:1px solid rgba(74,124,47,0.35);border-radius:8px;padding:7px 10px;margin-bottom:5px;gap:8px;">
+      <div style="flex:1;font-size:13px;font-weight:700;">${it.name}
+        ${it.extras.length?`<div style="font-size:11px;color:var(--g);">+ ${it.extras.join(', ')}</div>`:''}
+        ${it.removes.length?`<div style="font-size:11px;color:#ff7070;">- ${it.removes.join(', ')}</div>`:''}
+        ${it.note?`<div style="font-size:11px;color:rgba(255,255,255,0.45);">📝 ${it.note}</div>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;">
+        <button onclick="editChgQty(${o.id},${i},-1)" style="background:var(--r);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:18px;font-weight:bold;">−</button>
+        <span style="font-weight:900;min-width:20px;text-align:center;">${it.qty}</span>
+        <button onclick="editChgQty(${o.id},${i},1)" style="background:var(--r);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:18px;font-weight:bold;">+</button>
+      </div>
+      <span style="font-weight:900;color:var(--g);min-width:48px;text-align:right;font-family:'Fredoka One',cursive;">${fmt(it.price*it.qty)}</span>
+      <button onclick="editDelItem(${o.id},${i})" style="background:none;border:none;color:rgba(255,100,100,0.6);cursor:pointer;font-size:16px;">✕</button>
+    </div>`).join('');
+  document.getElementById('medit-total').textContent=fmt(o.total);
+}
+
+function editOrder(id){
+  const o=openOrders.find(x=>x.id===id);
+  if(!o)return;
+  document.getElementById('medit-title').textContent='✏️ Modifica — '+o.cognome;
+  renderEditItems(o);
+  selEditTab('items',null);
+  document.getElementById('medit').classList.add('show');
+  window._editId=id;
+}
+
+function editChgQty(orderId,itemIdx,d){
+  const o=openOrders.find(x=>x.id===orderId);
+  if(!o)return;
+  o.items[itemIdx].qty+=d;
+  if(o.items[itemIdx].qty<=0)o.items.splice(itemIdx,1);
+  o.total=o.items.reduce((s,i)=>s+i.price*i.qty,0);
+  if(o.type==='domicilio')o.total+=DELIVERY_COST;
+  o.total=+o.total.toFixed(2);
+  saveOrders();
+  if(!o.items.length){
+    document.getElementById('medit').classList.remove('show');
+    openOrders=openOrders.filter(x=>x.id!==orderId);
+    saveOrders();updCount();renderOpen();
+    toast('Ordine svuotato e rimosso','ok');return;
+  }
+  renderEditItems(o);
+}
+
+function editDelItem(orderId,itemIdx){
+  editChgQty(orderId,itemIdx,-99);
+}
+
+function closeEditModal(){document.getElementById('medit').classList.remove('show');renderOpen();}
+function editPrintComanda(){
+  const o=openOrders.find(x=>x.id===window._editId);
+  if(o)printComanda(o);
+}
+
+function deleteOrder(id){
+  openOrders=openOrders.filter(o=>o.id!==id);
+  saveOrders();updCount();renderOpen();
+  toast('Ordine annullato','ok',3000);
+}
+
+// PAY
+function openPay(id){
+  if(id===null){
+    const cog=document.getElementById('cognome').value.trim();
+    if(!cog||!order.items.length){toast('Completa l\'ordine prima di pagare!','err');return;}
+    order.cognome=cog;order.total=getTotal();
+    payId=null;
+    showPayModal(order.total,cog);
+  } else {
+    const o=openOrders.find(x=>x.id===id);
+    if(!o)return;
+    payId=id;
+    showPayModal(o.total,o.cognome);
+  }
+}
+let payMethod=null;
+
+function showPayModal(tot,name){
+  document.getElementById('pay-tot').textContent=fmt(tot);
+  document.getElementById('pay-info').textContent='Cliente: '+name;
+  document.getElementById('pay-in').value='';
+  document.getElementById('pay-sconto').value='';
+  document.getElementById('pay-sconto-card').value='';
+  document.getElementById('resto-val').textContent='€ 0,00';
+  document.getElementById('card-amount').textContent=fmt(tot);
+  document.getElementById('pay-cash-section').style.display='none';
+  document.getElementById('pay-card-section').style.display='none';
+  document.getElementById('pay-confirm-btn').style.opacity='0.4';
+  document.getElementById('pay-confirm-btn').style.pointerEvents='none';
+  payMethod=null;
+  ['pay-cash-btn','pay-card-btn'].forEach(id=>{
+    const b=document.getElementById(id);
+    b.style.background='rgba(0,0,0,0.3)';
+    b.style.color='rgba(255,255,255,0.6)';
+    b.style.borderColor='rgba(245,216,0,0.3)';
+  });
+  document.getElementById('mpay').classList.add('show');
+}
+
+function updateCardTotal(){
+  const tot=payId?openOrders.find(o=>o.id===payId)?.total:getTotal();
+  const sconto=parseFloat(document.getElementById('pay-sconto-card').value)||0;
+  const finale=Math.max(0,tot-sconto);
+  document.getElementById('card-amount').textContent=fmt(finale);
+}
+
+function setPayMethod(m){
+  payMethod=m;
+  const cashBtn=document.getElementById('pay-cash-btn');
+  const cardBtn=document.getElementById('pay-card-btn');
+  const confirmBtn=document.getElementById('pay-confirm-btn');
+  if(m==='cash'){
+    cashBtn.style.background='var(--g)';cashBtn.style.color='var(--vs)';cashBtn.style.borderColor='var(--g)';
+    cardBtn.style.background='rgba(0,0,0,0.3)';cardBtn.style.color='rgba(255,255,255,0.6)';cardBtn.style.borderColor='rgba(245,216,0,0.3)';
+    document.getElementById('pay-cash-section').style.display='block';
+    document.getElementById('pay-card-section').style.display='none';
+    confirmBtn.style.opacity='0.4';confirmBtn.style.pointerEvents='none';
+  } else {
+    cardBtn.style.background='#2980b9';cardBtn.style.color='#fff';cardBtn.style.borderColor='#3498db';
+    cashBtn.style.background='rgba(0,0,0,0.3)';cashBtn.style.color='rgba(255,255,255,0.6)';cashBtn.style.borderColor='rgba(245,216,0,0.3)';
+    document.getElementById('pay-cash-section').style.display='none';
+    document.getElementById('pay-card-section').style.display='block';
+    confirmBtn.style.opacity='1';confirmBtn.style.pointerEvents='auto';
+  }
+}
+
+function calcResto(){
+  const tot=payId?openOrders.find(o=>o.id===payId)?.total:getTotal();
+  const sconto=parseFloat(document.getElementById('pay-sconto').value)||0;
+  const totale_finale=Math.max(0,tot-sconto);
+  const dato=parseFloat(document.getElementById('pay-in').value)||0;
+  const resto=Math.max(0,dato-totale_finale);
+  document.getElementById('resto-val').textContent=fmt(resto);
+  const confirmBtn=document.getElementById('pay-confirm-btn');
+  if(dato>=totale_finale){confirmBtn.style.opacity='1';confirmBtn.style.pointerEvents='auto';}
+  else{confirmBtn.style.opacity='0.4';confirmBtn.style.pointerEvents='none';}
+}
+function closePay(){document.getElementById('mpay').classList.remove('show');payId=null;payMethod=null;}
+function completePay(){
+  if(!payMethod){toast('Seleziona contanti o carta!','err');return;}
+  const tot=payId?openOrders.find(o=>o.id===payId)?.total:getTotal();
+  const sconto=payMethod==='cash'
+    ?(parseFloat(document.getElementById('pay-sconto').value)||0)
+    :(parseFloat(document.getElementById('pay-sconto-card').value)||0);
+  const totalefinale=Math.max(0,tot-sconto);
+  if(payMethod==='cash'){
+    const dato=parseFloat(document.getElementById('pay-in').value)||0;
+    if(dato<totalefinale){toast('Il cliente non ha dato abbastanza!','err');return;}
+  }
+  let paidOrder=null;
+  if(payId){
+    paidOrder=openOrders.find(o=>o.id===payId);
+    openOrders=openOrders.filter(o=>o.id!==payId);
+  } else {
+    order.cognome=document.getElementById('cognome').value.trim();
+    order.total=getTotal();
+    order.time=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+    order.date=new Date().toLocaleDateString('it-IT');
+    paidOrder={...order};
+    saveCli();clearOrder();
+  }
+  if(paidOrder){
+    paidOrder.paidTime=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+    paidOrder.paidDate=new Date().toLocaleDateString('it-IT');
+    paidOrder.payMethod=payMethod;
+    paidOrder.sconto=sconto;
+    paidOrder.totalePagato=totalefinale;
+    completedOrders.push(paidOrder);
+    localStorage.setItem('bb_comp',JSON.stringify(completedOrders));
+  }
+  saveOrders();updCount();
+  if(view==='open')renderOpen();
+  if(view==='comp')renderCompleted();
+  if(view==='stats')renderStats();
+  const scontoTxt=sconto>0?` (sconto ${fmt(sconto)})`:'';
+  const methodLabel=payMethod==='cash'?'💵 Contanti':'💳 Carta';
+  closePay();
+  toast(`Pagamento ${methodLabel} completato${scontoTxt}!`,'ok',4000);
+}
+
+// EXTRA MODAL
+function openEx(name,ing,isMax=false,excl=[],keepSel=false,farcitaPlus=false){
+  if(!keepSel){
+    selEx=[];selRm=[];
+    window._editMode=false;
+    window._editCartIdx=undefined;
+  }
+  const baseList=farcitaPlus?EXTRAS_FARCITA:(isMax?EXTRAS_MAX:EXTRAS);
+  const extrasList=baseList.filter(e=>!excl.includes(e.n));
+  document.getElementById('mex-title').textContent='🍕 '+name;
+  if(!keepSel)document.getElementById('mex-note').value='';
+  document.getElementById('mex-note-label').textContent='📝 Note aggiuntive';
+  document.getElementById('mex-extras').innerHTML=extrasList.map(e=>`<button class="ebtn" data-name="${e.n.replace(/"/g,'&quot;')}" onclick="togEx(this,'${e.n.replace(/'/g,"\\'")}')" ${e.special?'style="border-color:#3498db;color:#3498db;"':''}>${e.n} <span style="color:var(--g);font-size:11px;">${e.p===0?'gratis':'+€'+e.p}</span></button>`).join('');
+  const ings=ing.split(',').map(s=>s.trim()).filter(Boolean);
+  document.getElementById('mex-removes').innerHTML=ings.length?ings.map(e=>`<button class="rbtn" onclick="togRm(this,'${e.replace(/'/g,"\\'")}')">${e}</button>`).join(''):'<span style="color:rgba(255,255,255,0.3);font-size:12px;">Nessun ingrediente base</span>';
+  // Evidenzia subito senza setTimeout
+  if(keepSel){
+    document.querySelectorAll('#mex-extras .ebtn').forEach(btn=>{
+      const name=btn.dataset.name||btn.childNodes[0].textContent.trim();
+      if(selEx.includes(name)){
+        btn.style.background='var(--g)';btn.style.color='var(--vs)';btn.style.borderColor='var(--g)';
+      }
+    });
+    document.querySelectorAll('#mex-removes .rbtn').forEach(btn=>{
+      if(selRm.includes(btn.textContent.trim())){
+        btn.style.background='var(--r)';btn.style.borderColor='var(--r)';
+      }
+    });
+  }
+  document.getElementById('mex').classList.add('show');
+}
+
+// METÀ/METÀ MODAL
+let metaMetaName='';
+let metaMetaPrice=0;
+let metaMetaIsMax=false;
+let metaMetaGusti={prima:[],seconda:[]};
+let metaMetaExtras={prima:[],seconda:[]};
+
+function calcMetaPrice(){
+  let extra=0;
+  let hasPrestige=false; // Bresaola o Bufala presenti in qualsiasi metà
+
+  ['prima','seconda'].forEach(lato=>{
+    const exs=metaMetaExtras[lato];
+    let contatore=0;
+    exs.forEach(n=>{
+      const ex=EXTRAS_MAX.find(e=>e.n===n);
+      if(!ex)return;
+      if(n==='Bresaola'||n==='Bufala'){
+        hasPrestige=true; // segna presenza ma non aggiunge ancora
+      } else if(ex.p===0){
+        // gratis
+      } else {
+        contatore++;
+        if(contatore>4)extra+=2; // dal 5° in poi €2
+      }
+    });
+  });
+
+  if(hasPrestige)extra+=3; // Bresaola/Bufala: sempre +€3 a prescindere da quante metà
+
+  return +(metaMetaPrice+extra).toFixed(2);
+}
+
+function updateMetaTot(){
+  document.getElementById('mmeta-totrow').textContent='Totale: '+fmt(calcMetaPrice());
+}
+
+function updateMetaCount(lato){
+  const exs=metaMetaExtras[lato];
+  let c=0;
+  exs.forEach(n=>{const ex=EXTRAS_MAX.find(e=>e.n===n);if(ex&&ex.p!==0&&ex.p!==4)c++;});
+  const r=Math.max(0,4-c);
+  document.getElementById('mmeta-count-'+lato).textContent=c<=4?`(${r} gratis rim.)`:`(${c-4} a €2)`;
+}
+
+function openMetaMeta(name,price,isMax,skipReset=false){
+  metaMetaName=name;metaMetaPrice=price;metaMetaIsMax=isMax;
+  if(!skipReset){
+    metaMetaGusti={prima:[],seconda:[]};
+    metaMetaExtras={prima:[],seconda:[]};
+    window._editMode=false;
+    window._editCartIdx=undefined;
+  }
+  document.getElementById('mmeta-title').textContent='⬡ '+name;
+  document.getElementById('mmeta-note').value='';
+  if(!skipReset){
+    ['prima','seconda'].forEach(lato=>{
+      document.getElementById('mmeta-'+lato+'-sel').textContent='Tocca per scegliere gusto...';
+      document.getElementById('mmeta-'+lato+'-sel').style.color='rgba(255,255,255,0.4)';
+      document.getElementById('mmeta-grid-'+lato+'-wrap').style.display='none';
+    });
+  }
+  const gusti=MENU['Pizze Tonde'].map(p=>p.n).sort((a,b)=>a.localeCompare(b,'it'));
+  ['prima','seconda'].forEach(lato=>{
+    document.getElementById('mmeta-grid-'+lato).innerHTML=gusti.map(g=>{
+      const sel=skipReset&&metaMetaGusti[lato].includes(g);
+      return `<button onclick="togMetaGusto('${lato}','${g.replace(/'/g,"\'")}',this)"
+        style="padding:5px 3px;background:${sel?'var(--g)':'rgba(45,90,27,0.4)'};border:1px solid ${sel?'var(--g)':'var(--vc)'};color:${sel?'var(--vs)':'#fff'};border-radius:5px;cursor:pointer;font-size:10px;font-weight:700;text-align:center;">${g}</button>`;
+    }).join('');
+
+    // Label gusto
+    const selEl=document.getElementById('mmeta-'+lato+'-sel');
+    if(skipReset&&metaMetaGusti[lato].length){
+      selEl.textContent='✅ '+metaMetaGusti[lato].join(' + ');
+      selEl.style.color='var(--g)';
+    } else if(!skipReset){
+      selEl.textContent='Tocca per scegliere gusto...';
+      selEl.style.color='rgba(255,255,255,0.4)';
+    }
+
+    document.getElementById('mmeta-extra-'+lato).innerHTML=EXTRAS_MAX.map(e=>{
+      const sel=skipReset&&metaMetaExtras[lato].includes(e.n);
+      return `<button data-name="${e.n}" onclick="togMetaExtraLato('${lato}',this,'${e.n.replace(/'/g,"\\'")}')"
+        style="padding:3px 6px;background:${sel?'var(--g)':'rgba(0,0,0,0.3)'};border:1px solid ${sel?'var(--g)':'rgba(245,216,0,0.2)'};color:${sel?'var(--vs)':'rgba(255,255,255,0.65)'};border-radius:5px;cursor:pointer;font-size:10px;font-weight:700;white-space:nowrap;${e.special&&!sel?'border-color:#3498db;color:#7fb3d3;':''}">
+        ${e.n}
+      </button>`;
+    }).join('');
+
+    updateMetaCount(lato);
+  });
+  updateMetaTot();
+  document.getElementById('mmeta').classList.add('show');
+}
+
+function toggleGustiGrid(lato){
+  const wrap=document.getElementById('mmeta-grid-'+lato+'-wrap');
+  wrap.style.display=wrap.style.display==='none'?'block':'none';
+}
+
+function togMetaGusto(lato,gusto,btn){
+  const arr=metaMetaGusti[lato];
+  const wrap=document.getElementById('mmeta-grid-'+lato+'-wrap');
+  if(arr.includes(gusto)){
+    metaMetaGusti[lato]=arr.filter(g=>g!==gusto);
+    btn.style.background='rgba(45,90,27,0.4)';btn.style.borderColor='var(--vc)';btn.style.color='#fff';
+  } else {
+    metaMetaGusti[lato].push(gusto);
+    btn.style.background='var(--g)';btn.style.borderColor='var(--g)';btn.style.color='var(--vs)';
+  }
+  const sel=document.getElementById('mmeta-'+lato+'-sel');
+  if(metaMetaGusti[lato].length){
+    sel.textContent='✅ '+metaMetaGusti[lato].join(' + ');
+    sel.style.color='var(--g)';
+    wrap.style.display='none';
+  } else {
+    sel.textContent='Tocca per scegliere gusto...';
+    sel.style.color='rgba(255,255,255,0.4)';
+  }
+}
+
+function togMetaExtraLato(lato,btn,n){
+  const arr=metaMetaExtras[lato];
+  if(arr.includes(n)){
+    metaMetaExtras[lato]=arr.filter(e=>e!==n);
+    btn.style.background='rgba(0,0,0,0.3)';btn.style.borderColor='rgba(245,216,0,0.2)';btn.style.color='rgba(255,255,255,0.65)';
+  } else {
+    metaMetaExtras[lato].push(n);
+    btn.style.background='var(--g)';btn.style.borderColor='var(--g)';btn.style.color='var(--vs)';
+  }
+  updateMetaCount(lato);
+  updateMetaTot();
+}
+
+function confirmMetaMeta(){
+  const p1=metaMetaGusti.prima.length||metaMetaExtras.prima.length;
+  const p2=metaMetaGusti.seconda.length||metaMetaExtras.seconda.length;
+  if(!p1||!p2){toast('Ogni meta deve avere almeno un gusto o un extra!','err');return;}
+  const descMeta=(lato)=>{
+    const g=metaMetaGusti[lato].join(' e ');
+    const e=metaMetaExtras[lato].join(', ');
+    if(g&&e)return g+' + '+e;
+    return g||e;
+  };
+  const nota=(document.getElementById('mmeta-note').value.trim()?document.getElementById('mmeta-note').value.trim()+' - ':'')+'Meta\': '+descMeta('prima')+' / Meta\': '+descMeta('seconda');
+  const fp=calcMetaPrice();
+
+  if(window._editMode&&window._editCartIdx!==undefined){
+    // Modalità modifica
+    const idx=window._editCartIdx;
+    order.items[idx].note=nota;
+    order.items[idx].price=fp;
+    order.items[idx].extras=[];
+    window._editMode=false;window._editCartIdx=undefined;
+    renderItems();
+    document.getElementById('mmeta').classList.remove('show');
+    toast('Metà/Metà modificata! ✅','ok',2000);
+  } else {
+    order.items.push({name:metaMetaName,price:fp,extras:[],removes:[],note:nota,qty:1});
+    renderItems();
+    document.getElementById('mmeta').classList.remove('show');
+    toast('Meta/Meta aggiunto! '+fmt(fp),'ok',2000);
+  }
+}
+
+function togEx(btn,n){
+  if(selEx.includes(n)){
+    selEx=selEx.filter(e=>e!==n);
+    btn.style.background='';btn.style.color='';btn.style.borderColor='';
+    btn.classList.remove('sel');
+  } else {
+    selEx.push(n);
+    btn.style.background='var(--g)';btn.style.color='var(--vs)';btn.style.borderColor='var(--g)';
+    btn.classList.add('sel');
+  }
+}
+function togRm(btn,n){selRm.includes(n)?(selRm=selRm.filter(e=>e!==n),btn.classList.remove('sel')):(selRm.push(n),btn.classList.add('sel'));}
+function closeEx(){
+  document.getElementById('mex').classList.remove('show');
+  pendProd=null;
+  window._editMode=false;
+  window._editCartIdx=undefined;
+}
+function confirmEx(){
+  if(!pendProd)return;
+  const nota=document.getElementById('mex-note').value.trim();
+
+  let extraPrice=0;
+  if(pendProd.farcitaPlus){
+    // Farcita+: tutti gratis tranne Bresaola/Bufala sempre €3
+    const hasPrestige=selEx.includes('Bresaola')||selEx.includes('Bufala');
+    if(hasPrestige)extraPrice=3;
+  } else {
+    // Pizze normali: usa prezzi da lista
+    const list=pendProd.isMax?EXTRAS_MAX:EXTRAS;
+    extraPrice=selEx.reduce((s,n)=>{const ex=list.find(x=>x.n===n);return s+(ex?ex.p:0);},0);
+  }
+
+  const fp=+(pendProd.price+extraPrice).toFixed(2);
+
+  if(window._editMode&&window._editCartIdx!==undefined){
+    const idx=window._editCartIdx;
+    order.items[idx].extras=[...selEx];
+    order.items[idx].removes=[...selRm];
+    order.items[idx].note=nota;
+    order.items[idx].price=fp;
+    window._editMode=false;window._editCartIdx=undefined;
+    renderItems();
+    closeEx();
+    toast('Prodotto modificato! ✅','ok',2000);
+  } else {
+    order.items.push({name:pendProd.name,price:fp,extras:[...selEx],removes:[...selRm],note:nota,qty:1});
+    renderItems();
+    closeEx();
+  }
+}
+
+// RAWBT PRINTING - ESC/POS bytes
+function buildEscPosBytes(o){
+  const ora=o.time||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  const data=o.date||new Date().toLocaleDateString('it-IT');
+  const enc=new TextEncoder();
+  const ESC=0x1B, GS=0x1D, LF=0x0A;
+
+  // Helper per aggiungere bytes
+  const bytes=[];
+  const add=(...b)=>bytes.push(...b);
+  const str=s=>bytes.push(...enc.encode(s));
+  const nl=()=>bytes.push(LF);
+
+  // Reset stampante
+  add(ESC,0x40);
+  // Allineamento centro
+  add(ESC,0x61,0x01);
+  // Testo doppio (width+height)
+  add(ESC,0x21,0x30);
+  str('BUGS BUNNY\n');
+  // Testo normale
+  add(ESC,0x21,0x00);
+  str(data+'  '+ora+'\n');
+  str('================================\n');
+
+  // Tipo ordine — doppio
+  add(ESC,0x21,0x30);
+  if(o.type==='domicilio'){
+    str('DOMICILIO\n');
+  } else {
+    str('ASPORTO\n');
+  }
+  add(ESC,0x21,0x00);
+
+  if(o.type==='domicilio'){
+    // Allineamento sinistra
+    add(ESC,0x61,0x00);
+    add(ESC,0x21,0x10); // altezza doppia
+    str((o.indirizzo||'N/D')+'\n');
+    str('Tel: '+(o.telefono||'-')+'\n');
+    add(ESC,0x21,0x00);
+  }
+  str('================================\n');
+
+  function getCat(name){
+    for(const [cat,items] of Object.entries(MENU)){
+      const found=items.find(i=>i.n===name);
+      if(found)return found.cat||'altro';
+    }
+    return 'altro';
+  }
+  const pizze=o.items.filter(i=>getCat(i.name)==='pizza');
+  const rosticceria=o.items.filter(i=>getCat(i.name)==='rosticceria');
+  const bibite=o.items.filter(i=>['bibita','birra'].includes(getCat(i.name)));
+  const altro=o.items.filter(i=>!['pizza','rosticceria','bibita','birra'].includes(getCat(i.name)));
+
+  function addSection(title,items){
+    if(!items.length)return;
+    add(ESC,0x61,0x01); // centro
+    add(ESC,0x21,0x08); // bold
+    str('\n*** '+title+' ***\n');
+    add(ESC,0x61,0x00); // sinistra
+    str('--------------------------------\n');
+    add(ESC,0x21,0x00);
+
+    items.forEach(i=>{
+      let nomeStampa=i.name.replace(/\s*\(met[aà]\/met[aà]\)/gi,'').trim();
+      nomeStampa=nomeStampa
+        .replace('Bolognese Burrata','Bol.Burrata')
+        .replace('Quattro Stagioni','4 Stagioni')
+        .replace('Quattro Formaggi','4 Formaggi')
+        .replace('Mezzo Metro','M.Metro');
+
+      // Quantità e nome — testo grande
+      add(ESC,0x21,0x20); // larghezza doppia
+      str(i.qty+'x '+nomeStampa+'\n');
+      add(ESC,0x21,0x00); // normale
+
+      let notaLibera='';
+      if(i.note&&i.note.includes("Meta'")){
+        const parti=i.note.split(' · ');
+        parti.forEach(p=>{
+          if(p.includes("Meta':")){
+            p.split(' / ').forEach(h=>{
+              const hc=h.trim()
+                .replace("Meta': Bolognese Burrata","Meta': Bol.Burrata")
+                .replace("Meta': Quattro Stagioni","Meta': 4 Stagioni")
+                .replace("Meta': Quattro Formaggi","Meta': 4 Formaggi");
+              str('   >> '+hc+'\n');
+            });
+          } else if(p.trim()) notaLibera=p.trim();
+        });
+      } else if(i.note) notaLibera=i.note;
+
+      if(i.extras.length)i.extras.forEach(e=>str('   + '+e+'\n'));
+      if(i.removes.length)i.removes.forEach(r=>str('   - '+r+'\n'));
+      if(notaLibera)str('   ! '+notaLibera+'\n');
+    });
+  }
+
+  addSection('PIZZE',pizze);
+  if(rosticceria.length)addSection('ROSTICCERIA',rosticceria);
+  if(bibite.length||altro.length)addSection('BIBITE',[...bibite,...altro]);
+
+  str('================================\n');
+  // Cliente e orario grandi
+  add(ESC,0x61,0x01);
+  add(ESC,0x21,0x30);
+  str(o.cognome.toUpperCase()+'\n');
+  add(ESC,0x21,0x10);
+  str('ORA: '+(o.orario||'-')+'\n');
+  add(ESC,0x21,0x00);
+  str('================================\n');
+  // Avanza carta e taglia
+  add(LF,LF,LF);
+  add(GS,0x56,0x41,0x03);
+
+  return new Uint8Array(bytes);
+}
+
+function buildEscPosText(o){
+  const ora=o.time||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  const data=o.date||new Date().toLocaleDateString('it-IT');
+  const ESC='\x1B',GS='\x1D';
+  const BIG=ESC+'\x21\x30';   // doppio width+height
+  const MED=ESC+'\x21\x10';   // doppio height
+  const WIDE=ESC+'\x21\x20';  // doppio width
+  const NRM=ESC+'\x21\x00';   // normale
+  const BOLD=ESC+'\x45\x01';
+  const BOFF=ESC+'\x45\x00';
+  const CTR=ESC+'\x61\x01';
+  const LFT=ESC+'\x61\x00';
+
+  function getCat(name){for(const [cat,items] of Object.entries(MENU)){const found=items.find(i=>i.n===name);if(found)return found.cat||'altro';}return 'altro';}
+  const pizze=o.items.filter(i=>getCat(i.name)==='pizza');
+  const rosticceria=o.items.filter(i=>getCat(i.name)==='rosticceria');
+  const bibite=o.items.filter(i=>['bibita','birra'].includes(getCat(i.name)));
+  const altro=o.items.filter(i=>!['pizza','rosticceria','bibita','birra'].includes(getCat(i.name)));
+
+  let txt='';
+  txt+=CTR+BIG+'BUGS BUNNY\n'+NRM;
+  txt+=CTR+data+'  '+ora+'\n';
+  txt+='================================\n';
+  txt+=CTR+BIG+(o.type==='domicilio'?'DOMICILIO':'ASPORTO')+'\n'+NRM;
+  txt+=LFT;
+  if(o.type==='domicilio'){
+    txt+=MED+(o.indirizzo||'N/D')+'\n'+NRM;
+    txt+='Tel: '+(o.telefono||'-')+'\n';
+  }
+  txt+='================================\n';
+
+  function addSection(title,items){
+    if(!items.length)return;
+    txt+=CTR+BOLD+'\n'+title+'\n'+BOFF+LFT;
+    txt+='--------------------------------\n';
+    items.forEach(i=>{
+      let n=i.name.replace(/\s*\(met[aà]\/met[aà]\)/gi,'').trim()
+        .replace('Bolognese Burrata','Bol.Burrata')
+        .replace('Quattro Stagioni','4 Stagioni')
+        .replace('Quattro Formaggi','4 Formaggi')
+        .replace('Mezzo Metro','M.Metro');
+      txt+=WIDE+i.qty+'x '+n+'\n'+NRM;
+      let notaLibera='';
+      if(i.note&&i.note.includes("Meta'")){
+        const parti=i.note.split(' - ');
+        parti.forEach(p=>{
+          if(p.includes("Meta':")){p.split(' / ').forEach(h=>txt+='  >> '+h.trim()+'\n');}
+          else if(p.trim())notaLibera=p.trim();
+        });
+      } else if(i.note) notaLibera=i.note;
+      if(i.extras.length)i.extras.forEach(e=>txt+='  + '+e+'\n');
+      if(i.removes.length)i.removes.forEach(r=>txt+='  - '+r+'\n');
+      if(notaLibera)txt+='  ! '+notaLibera+'\n';
+    });
+  }
+
+  addSection('*** PIZZE ***',pizze);
+  if(rosticceria.length)addSection('*** ROSTICCERIA ***',rosticceria);
+  if(bibite.length||altro.length)addSection('*** BIBITE ***',[...bibite,...altro]);
+
+  txt+='================================\n';
+  txt+=CTR+BIG+o.cognome.toUpperCase()+'\n';
+  txt+=MED+'ORA: '+(o.orario||'-')+'\n'+NRM;
+  if(o.total)txt+=MED+'TOT: '+fmt(o.total)+'\n'+NRM;
+  txt+=LFT+'================================\n\n\n';
+  return txt;
+}
+
+function printViaRawBT(o){
+  const testo=buildEscPosText(o);
+  window.location.href='rawbt:'+encodeURIComponent(testo);
+  setTimeout(()=>{toast('Stampa inviata! 🖨️','ok',2000);},300);
+}
+
+
+
+function connectBluetooth(){
+  toast('RawBT gestisce la connessione automaticamente!','ok',3000);
+  document.getElementById('bt-status').textContent='🖨️ RawBT ✅';
+  document.getElementById('bt-status').style.color='#2ecc71';
+}
+
+// PRINT
+async function printComanda(o){
+  if(!o)return;
+  printViaRawBT(o);
+}
+
+function addNote(txt){
+  const el=document.getElementById('mex-note');
+  el.value=el.value?(el.value+', '+txt):txt;
+}
+
+function printRiepilogo(){
+  if(!completedOrders.length){toast('Nessun ordine completato','err');return;}
+  const ora=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  const data=new Date().toLocaleDateString('it-IT');
+  const tot=completedOrders.reduce((s,o)=>s+(o.total||0),0);
+  const incassoReale=completedOrders.reduce((s,o)=>s+(o.totalePagato||o.total||0),0);
+  const totSconti=completedOrders.reduce((s,o)=>s+(o.sconto||0),0);
+  const cash=completedOrders.filter(o=>o.payMethod==='cash');
+  const card=completedOrders.filter(o=>o.payMethod==='card');
+  const asporto=completedOrders.filter(o=>o.type==='asporto');
+  const domicilio=completedOrders.filter(o=>o.type==='domicilio');
+  const prodCount={};
+  completedOrders.forEach(o=>o.items.forEach(i=>{prodCount[i.name]=(prodCount[i.name]||0)+i.qty;}));
+  const topProds=Object.entries(prodCount).sort((a,b)=>b[1]-a[1]);
+  const pizzeCount=completedOrders.reduce((s,o)=>s+o.items.filter(i=>{
+    for(const cat of ['Pizze Tonde','Pizze Max','Pizze Mezzo Metro']){if(MENU[cat]&&MENU[cat].find(p=>p.n===i.name))return true;}return false;
+  }).reduce((ss,i)=>ss+i.qty,0),0);
+  const byHour={};
+  completedOrders.forEach(o=>{
+    let t=null;
+    if(o.orario&&o.orario!=='Appena possibile'){t=o.orario.replace('.',':');}
+    else{t=o.time;}
+    if(t){const h=t.split(':')[0].trim();if(h&&!isNaN(h))byHour[h]=(byHour[h]||0)+1;}
+  });
+  const peakHour=Object.entries(byHour).sort((a,b)=>b[1]-a[1])[0];
+
+  const ESC='\x1B',FONT_GRANDE=ESC+'\x21\x30',FONT_MEDIO=ESC+'\x21\x10',FONT_NORMALE=ESC+'\x21\x00',CENTER=ESC+'\x61\x01',LEFT=ESC+'\x61\x00',BOLD=ESC+'\x45\x01',BOLD_OFF=ESC+'\x45\x00';
+
+  let txt='';
+  txt+=CENTER+FONT_GRANDE+'BUGS BUNNY\n'+FONT_NORMALE;
+  txt+=CENTER+'RIEPILOGO SERATA\n';
+  txt+=CENTER+data+'  '+ora+'\n';
+  txt+='================================\n';
+  txt+=LEFT;
+  txt+=FONT_MEDIO+'Ordini: '+completedOrders.length+'\n'+FONT_NORMALE;
+  txt+=FONT_MEDIO+'Asporto: '+asporto.length+'  Domicilio: '+domicilio.length+'\n'+FONT_NORMALE;
+  txt+='================================\n';
+  txt+=FONT_MEDIO+'Incasso lordo:  '+fmt(tot)+'\n'+FONT_NORMALE;
+  if(totSconti>0)txt+='Sconti:         -'+fmt(totSconti)+'\n';
+  txt+=FONT_MEDIO+'Incasso netto:  '+fmt(incassoReale)+'\n'+FONT_NORMALE;
+  txt+='--------------------------------\n';
+  txt+='Contanti: '+fmt(cash.reduce((s,o)=>s+(o.totalePagato||o.total||0),0))+' ('+cash.length+' ord)\n';
+  txt+='Carta:    '+fmt(card.reduce((s,o)=>s+(o.totalePagato||o.total||0),0))+' ('+card.length+' ord)\n';
+  txt+='================================\n';
+  txt+=FONT_MEDIO+'Pizze sfornate: '+pizzeCount+'\n'+FONT_NORMALE;
+  if(peakHour)txt+='Ora piu affollata: '+peakHour[0]+':00 ('+peakHour[1]+' ord)\n';
+  txt+='================================\n';
+  txt+=BOLD+'PRODOTTI:\n'+BOLD_OFF;
+  topProds.forEach(p=>txt+=p[1]+'x  '+p[0]+'\n');
+  txt+='================================\n\n\n';
+
+  window.location.href='rawbt:'+encodeURIComponent(txt);
+  toast('Riepilogo inviato! 🖨️','ok',2000);
+}
+let DELIVERY_COST=parseFloat(localStorage.getItem('bb_delivery')||'3');
+let currentDeliveryCost=DELIVERY_COST;
+function setDelivery(cost,force=false){
+  if(!force&&cost!==0&&currentDeliveryCost===cost){
+    currentDeliveryCost=0;
+    document.getElementById('del-3').style.background='rgba(0,0,0,0.3)';
+    document.getElementById('del-3').style.color='rgba(255,255,255,0.6)';
+    document.getElementById('del-3').style.borderColor='rgba(245,216,0,0.3)';
+    document.getElementById('del-5').style.background='rgba(0,0,0,0.3)';
+    document.getElementById('del-5').style.color='rgba(255,255,255,0.6)';
+    document.getElementById('del-5').style.borderColor='rgba(245,216,0,0.3)';
+  } else {
+    currentDeliveryCost=cost;
+    document.getElementById('del-3').style.background=cost===3?'var(--g)':'rgba(0,0,0,0.3)';
+    document.getElementById('del-3').style.color=cost===3?'#000':'rgba(255,255,255,0.6)';
+    document.getElementById('del-3').style.borderColor=cost===3?'var(--g)':'rgba(245,216,0,0.3)';
+    document.getElementById('del-5').style.background=cost===5?'var(--g)':'rgba(0,0,0,0.3)';
+    document.getElementById('del-5').style.color=cost===5?'#000':'rgba(255,255,255,0.6)';
+    document.getElementById('del-5').style.borderColor=cost===5?'var(--g)':'rgba(245,216,0,0.3)';
+  }
+  updTotal();
+}
+let ADMIN_PWD=localStorage.getItem('bb_adminpwd')||'1234';
+
+function getTotal(){
+  let t=order.items.reduce((s,i)=>s+i.price*i.qty,0);
+  if(order.type==='domicilio')t+=currentDeliveryCost;
+  return +t.toFixed(2);
+}
+
+function openAdmin(){
+  document.getElementById('admin-login').style.display='block';
+  document.getElementById('admin-panel').style.display='none';
+  document.getElementById('admin-pwd').value='';
+  document.getElementById('madmin').classList.add('show');
+}
+function closeAdmin(){document.getElementById('madmin').classList.remove('show');}
+
+function checkAdminPwd(){
+  const pwd=document.getElementById('admin-pwd').value;
+  if(pwd===ADMIN_PWD){
+    document.getElementById('admin-login').style.display='none';
+    document.getElementById('admin-panel').style.display='block';
+    renderAdminMenu();
+    document.getElementById('admin-delivery').value=DELIVERY_COST;
+  } else {
+    toast('Password errata!','err');
+    document.getElementById('admin-pwd').value='';
+  }
+}
+
+function selAdminTab(tab,btn){
+  ['prezzi','consegna','pwd'].forEach(t=>{
+    document.getElementById('atab-'+t).style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('.admin-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function renderAdminMenu(){
+  const el=document.getElementById('admin-menu-list');
+  let html='';
+  Object.entries(MENU).forEach(([cat,items])=>{
+    html+=`<div class="admin-cat">${cat}</div>`;
+    items.forEach((item,idx)=>{
+      html+=`<div class="admin-item">
+        <span class="admin-item-name">${item.n}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;color:rgba(255,255,255,0.4);">€</span>
+          <input class="admin-price-input" type="number" step="0.50" min="0"
+            value="${item.p}" data-cat="${cat}" data-idx="${idx}">
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML=html;
+}
+
+function saveAdminPrezzi(){
+  document.querySelectorAll('.admin-price-input').forEach(input=>{
+    const cat=input.dataset.cat;
+    const idx=parseInt(input.dataset.idx);
+    const newPrice=parseFloat(input.value);
+    if(!isNaN(newPrice)&&newPrice>=0){
+      MENU[cat][idx].p=newPrice;
+    }
+  });
+  // Salva nel localStorage
+  localStorage.setItem('bb_menu',JSON.stringify(MENU));
+  toast('Prezzi aggiornati!','ok');
+  renderCats();
+  closeAdmin();
+}
+
+function saveDelivery(){
+  const v=parseFloat(document.getElementById('admin-delivery').value);
+  if(isNaN(v)||v<0){toast('Valore non valido!','err');return;}
+  DELIVERY_COST=v;
+  localStorage.setItem('bb_delivery',v.toString());
+  toast('Costo consegna aggiornato a '+fmt(v)+'!','ok');
+  closeAdmin();
+  updTotal();
+}
+
+function saveAdminPwd(){
+  const p1=document.getElementById('admin-newpwd1').value;
+  const p2=document.getElementById('admin-newpwd2').value;
+  if(!p1){toast('Inserisci la nuova password!','err');return;}
+  if(p1!==p2){toast('Le password non coincidono!','err');return;}
+  ADMIN_PWD=p1;
+  localStorage.setItem('bb_adminpwd',p1);
+  toast('Password cambiata!','ok');
+  closeAdmin();
+}
+
+// INIT
+
+
+renderCats();
+updCount();
+</script>
 </body>
 </html>
