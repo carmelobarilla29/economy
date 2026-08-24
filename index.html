@@ -163,7 +163,7 @@ select.fi{appearance:none;background-image:linear-gradient(45deg,transparent 50%
 .modalbox b{font-family:var(--ff-d);font-size:17px;display:block;margin-bottom:7px}
 .modalrow{display:flex;gap:9px}
 .modalrow .btn{padding:12px}
-.itemrow{display:grid;grid-template-columns:1fr 62px 78px 34px;gap:7px;align-items:center}
+.itemrow{display:grid;grid-template-columns:1fr 74px 34px;gap:7px;align-items:center}
 .itemrow .fi{padding:10px;font-size:14.5px}
 .mini{background:none;border:1px solid var(--line);border-radius:9px;color:var(--tx-3);cursor:pointer;
   height:41px;display:grid;place-items:center;font-size:18px}
@@ -204,6 +204,14 @@ function load(){
     if(!r)return JSON.parse(JSON.stringify(blank));
     var d=JSON.parse(r);for(var k in blank)if(!(k in d))d[k]=Array.isArray(blank[k])?[]:blank[k];
     ["ledger","orders","sales","promos","play","debts"].forEach(function(k){if(!Array.isArray(d[k]))d[k]=[];});
+    d.orders.forEach(function(o){
+      if(!Array.isArray(o.items))o.items=[];
+      if(o.total===undefined||o.total===null){
+        var g=0;o.items.forEach(function(i){g+=(i.qty||0)*(i.price||0);});
+        o.total=g+(parseFloat(o.ship1)||0);
+      }
+      o.items.forEach(function(i){i.qty=Math.round(i.qty)||0;});
+    });
     d.sales=d.sales.filter(function(x){
       var o=null,i;for(i=0;i<d.orders.length;i++)if(d.orders[i].id===x.oid)o=d.orders[i];
       if(!o)return false;
@@ -251,11 +259,11 @@ function balance(w){return S.ledger.reduce(function(t,e){return e.w===w?t+e.a:t;
 
 /* ============================ BUSINESS ============================ */
 function oPieces(o){return o.items.reduce(function(t,i){return t+i.qty;},0);}
-function oGoods(o){return o.items.reduce(function(t,i){return t+i.qty*i.price;},0);}
-function oShip(o){return num(o.ship1)+num(o.ship2);}
-function oCost(o){return oGoods(o)+oShip(o);}
+function oPaid(o){return num(o.total);}                    /* tutto compreso fino al magazzino */
+function oShip2(o){return o.ship2paid?num(o.ship2):0;}     /* spedizione per l'Italia */
+function oCost(o){return oPaid(o)+oShip2(o);}
 function oOpen(o){return !o.ship2paid;}
-function unitCost(o,it){var p=oPieces(o);return it.price+(p?oShip(o)/p:0);}
+function unitCost(o,it){var p=oPieces(o);return p?oCost(o)/p:0;}
 function soldQty(oid,iid){return S.sales.reduce(function(t,s){return (s.oid===oid&&s.iid===iid)?t+s.qty:t;},0);}
 function leftQty(o,it){return Math.max(0,it.qty-soldQty(o.id,it.id));}
 function oRevenue(oid){return S.sales.reduce(function(t,s){return s.oid===oid?t+s.price:t;},0);}
@@ -478,8 +486,8 @@ function vBiz(){
     h+='<div class="card" data-order="'+o.id+'" style="cursor:pointer">'+
       '<div class="tile-top"><b style="font-family:var(--ff-d);font-size:15.5px">'+esc(o.name)+'</b>'+
       (oOpen(o)?'<span class="pill wait">spedizione da pagare</span>':'<span class="pill ok">arrivato</span>')+'</div>'+
-      '<div class="tile-s" style="margin-top:4px">'+dmy(o.date)+' · '+p+' pezzi · costo '+eur(cost)+
-        (oOpen(o)?' <span class="acc">(provvisorio)</span>':'')+'</div>'+
+      '<div class="tile-s" style="margin-top:4px">'+dmy(o.date)+' · '+p+' pezzi · '+eur(cost)+
+        ' ('+eur(p?cost/p:0)+' a pezzo'+(oOpen(o)?', provvisorio':'')+')</div>'+
       '<div class="bar"><i class="'+(pct>=100?"done":"")+'" style="width:'+pct.toFixed(0)+'%"></i></div>'+
       '<div class="tile-s" style="margin-top:7px">Rientrato '+eur(rev)+' su '+eur(cost)+' · '+
         (rev>=cost?'<span class="pos">tutto recuperato, il resto è guadagno</span>':
@@ -495,8 +503,8 @@ function vBiz(){
         var o=find(S.orders,s.oid),it=o?find(o.items,s.iid):null;
         return '<div class="row" data-del-sale="'+s.id+'"><div class="row-i">V</div><div class="row-m">'+
           '<b>'+esc(it?it.name:"articolo")+(s.qty>1?" ×"+s.qty:"")+'</b>'+
-          '<span>'+dmy(s.date)+' · '+esc(s.channel)+' · '+eur(s.price)+'</span></div>'+
-          '<div class="row-a '+(saleProfit(s)>=0?"pos":"neg")+'">'+eur(saleProfit(s),true)+'</div></div>';
+          '<span>'+dmy(s.date)+' · '+esc(s.channel)+(o?' · '+esc(o.name):'')+'</span></div>'+
+          '<div class="row-a pos">'+eur(s.price,true)+'</div></div>';
       }).join(""):'<div class="empty">Nessuna vendita registrata.</div>')+'</div></div>';
   return h;
 }
@@ -714,16 +722,17 @@ function sheetAdjust(w){
 var draftItems=[{n:"",q:"",p:""}];
 function sheetOrder(){
   draftItems=[{n:"",q:"",p:""}];
-  openSheet('<h3>Nuovo ordine</h3><p class="hint">Metti i pezzi e quanto costa ognuno. La spedizione la divido in parti uguali sui pezzi.</p>'+
+  openSheet('<h3>Nuovo ordine</h3><p class="hint">Quanto hai pagato in tutto e cosa hai preso. La spedizione per l\'Italia la aggiungi dopo.</p>'+
    '<div class="f">'+
     '<div><label class="fl">Nome ordine</label><input class="fi" id="o_name" placeholder="es. Ordine USFans agosto"></div>'+
     '<div class="f2"><div><label class="fl">Data</label>'+dateIn("o_d")+'</div>'+
      '<div><label class="fl">Pagato da</label>'+walletSel("o_w","conto")+'</div></div>'+
-    '<div><label class="fl">Articoli</label><div id="o_items"></div>'+
+    '<div><label class="fl">Totale pagato al fornitore</label>'+
+     '<input class="fi mono" id="o_s1" inputmode="decimal" placeholder="302,88">'+
+     '<p class="tile-s" style="margin:7px 0 0">Merce + commissioni + spedizione fino al magazzino: il numero che ti esce dal sito.</p></div>'+
+    '<div><label class="fl">Cosa hai preso</label><div id="o_items"></div>'+
      '<button class="btn ghost" id="o_add" style="padding:10px;margin-top:8px">+ Aggiungi articolo</button></div>'+
-    '<div><label class="fl">Commissioni + spedizione al magazzino</label>'+
-     '<input class="fi mono" id="o_s1" inputmode="decimal" placeholder="0,00"></div>'+
-    '<div class="note" id="o_prev">Compila gli articoli per vedere il costo a pezzo.</div>'+
+    '<div class="note" id="o_prev">Scrivi il totale e i pezzi per vedere quanto ti costa ognuno.</div>'+
     '<p class="err" id="o_err" hidden></p>'+
     '<button class="btn" id="o_go">Registra ordine</button></div>');
   drawItems();
@@ -732,21 +741,22 @@ function sheetOrder(){
   bind("o_go",function(){
     readItems();
     var items=draftItems.filter(function(i){return i.n.trim()&&num(i.q)>0;}).map(function(i){
-      return {id:uid(),name:i.n.trim(),qty:Math.round(num(i.q)),price:num(i.p)};});
+      return {id:uid(),name:i.n.trim(),qty:Math.round(num(i.q))};});
     if(!items.length)return showErr("o_err","Aggiungi almeno un articolo con nome e quantità.");
+    var tot=num(v("o_s1"));
+    if(tot<=0)return showErr("o_err","Scrivi quanto hai pagato in tutto.");
     var o={id:uid(),name:v("o_name").trim()||"Ordine",date:vd("o_d"),wallet:v("o_w"),
-      ship1:num(v("o_s1")),ship2:0,ship2paid:false,items:items};
+      total:tot,ship2:0,ship2paid:false,items:items};
     S.orders.push(o);
-    post(o.wallet,-(oGoods(o)+num(o.ship1)),"Ordine "+o.name,"ordine","order:"+o.id,o.date);
+    post(o.wallet,-tot,"Ordine "+o.name,"ordine","order:"+o.id,o.date);
     save();closeSheet();render();toast("Ordine registrato");
   });
 }
 function drawItems(){
   document.getElementById("o_items").innerHTML=draftItems.map(function(it,i){
     return '<div class="itemrow" style="margin-bottom:7px">'+
-     '<input class="fi" data-i="'+i+'" data-f="n" placeholder="Articolo" value="'+esc(it.n)+'">'+
+     '<input class="fi" data-i="'+i+'" data-f="n" placeholder="es. Pochette" value="'+esc(it.n)+'">'+
      '<input class="fi mono" data-i="'+i+'" data-f="q" inputmode="numeric" placeholder="Qtà" value="'+esc(it.q)+'">'+
-     '<input class="fi mono" data-i="'+i+'" data-f="p" inputmode="decimal" placeholder="€/pz" value="'+esc(it.p)+'">'+
      (draftItems.length>1?'<button class="mini" data-rm="'+i+'">−</button>':'<span></span>')+'</div>';
   }).join("");
   var box=document.getElementById("o_items");
@@ -767,15 +777,11 @@ function readItems(){
 function preview(){
   readItems();
   var pieces=draftItems.reduce(function(t,i){return t+num(i.q);},0);
-  var goods=draftItems.reduce(function(t,i){return t+num(i.q)*num(i.p);},0);
-  var s1=num(v("o_s1"));
+  var tot=num(v("o_s1"));
   var el=document.getElementById("o_prev");if(!el)return;
-  if(!pieces){el.textContent="Compila gli articoli per vedere il costo a pezzo.";return;}
-  var per=s1/pieces;
-  el.innerHTML="<b>"+pieces+" pezzi</b> · merce "+eur(goods)+" + spedizione "+eur(s1)+
-   " = <b>"+eur(goods+s1)+"</b><br>Spedizione: "+eur(per)+" a pezzo. "+
-   draftItems.filter(function(i){return i.n.trim()&&num(i.q)>0;}).map(function(i){
-     return esc(i.n)+" → "+eur(num(i.p)+per)+" l'uno";}).join(" · ");
+  if(!pieces||!tot){el.textContent="Scrivi il totale e i pezzi per vedere quanto ti costa ognuno.";return;}
+  el.innerHTML="<b>"+pieces+" pezzi</b> per <b>"+eur(tot)+"</b> → "+eur(tot/pieces)+
+   " a pezzo.<br>È un costo provvisorio: quando paghi la spedizione per l'Italia si aggiorna.";
 }
 
 /* ---- dettaglio ordine ---- */
@@ -785,17 +791,18 @@ function sheetOrderDetail(id){
     .reduce(function(t,s){return t+saleProfit(s);},0);
   var h='<h3>'+esc(o.name)+'</h3><p class="hint">'+dmy(o.date)+' · '+oPieces(o)+' pezzi'+
     (oOpen(o)?' · <span class="acc">spedizione per l\'Italia non ancora pagata</span>':'')+'</p>';
-  h+='<div class="card"><div class="kv"><span>Merce</span><b>'+eur(oGoods(o))+'</b></div>'+
-     '<div class="kv"><span>Spedizione al magazzino</span><b>'+eur(num(o.ship1))+'</b></div>'+
+  h+='<div class="card"><div class="kv"><span>Pagato al fornitore</span><b>'+eur(oPaid(o))+'</b></div>'+
      '<div class="kv"><span>Spedizione per l\'Italia</span><b>'+(o.ship2paid?eur(num(o.ship2)):"—")+'</b></div>'+
      '<div class="kv"><span>Costo totale</span><b>'+eur(cost)+'</b></div>'+
+     '<div class="kv"><span>Costo a pezzo</span><b>'+eur(oPieces(o)?cost/oPieces(o):0)+
+       (oOpen(o)?' <span class="acc">prov.</span>':'')+'</b></div>'+
      '<div class="kv"><span>Incassato finora</span><b class="pos">'+eur(rev)+'</b></div>'+
      '<div class="kv"><span>Profitto finora</span><b class="'+(prof>=0?"pos":"neg")+'">'+eur(prof,true)+'</b></div></div>';
   h+='<h4 class="sub">Articoli</h4><div class="card">'+o.items.map(function(it){
     var left=leftQty(o,it);
     return '<div class="row" style="cursor:default"><div class="row-i">'+left+'</div>'+
-     '<div class="row-m"><b>'+esc(it.name)+'</b><span>costa '+eur(unitCost(o,it))+' a pezzo'+
-      (oOpen(o)?" (provvisorio)":"")+' · venduti '+soldQty(o.id,it.id)+'/'+it.qty+'</span></div>'+
+     '<div class="row-m"><b>'+esc(it.name)+'</b><span>venduti '+soldQty(o.id,it.id)+' su '+it.qty+
+      ' · restano '+left+'</span></div>'+
      (left>0?'<button class="mini" data-sell="'+o.id+'|'+it.id+'" style="width:34px">›</button>':
       '<span class="pill ok">finito</span>')+'</div>';
   }).join("")+'</div>';
@@ -825,21 +832,20 @@ function sheetOrderEdit(id){
   var h='<h3>Modifica ordine</h3><p class="hint">Correggi prezzi, quantità e spedizioni. I costi si ricalcolano.</p>'+
    '<div class="f"><div><label class="fl">Nome</label>'+
    '<input class="fi" id="e_name" value="'+esc(o.name)+'"></div>'+
-   '<div><label class="fl">Articoli</label>'+o.items.map(function(it,i){
-      var sold=soldQty(o.id,it.id);
-      return '<div style="margin-bottom:9px">'+
-       '<input class="fi" id="e_n'+i+'" value="'+esc(it.name)+'" style="margin-bottom:6px">'+
-       '<div class="f2"><input class="fi mono" id="e_q'+i+'" inputmode="numeric" value="'+it.qty+'">'+
-       '<input class="fi mono" id="e_p'+i+'" inputmode="decimal" value="'+
-         String(it.price.toFixed(2)).replace(".",",")+'"></div>'+
-       (sold?'<div class="tile-s" style="margin-top:4px">'+sold+' già venduti: la quantità non può scendere sotto</div>':'')+
-       '</div>';
-    }).join("")+'</div>'+
-   '<div class="f2"><div><label class="fl">Sped. magazzino</label>'+
-    '<input class="fi mono" id="e_s1" inputmode="decimal" value="'+String(num(o.ship1).toFixed(2)).replace(".",",")+'"></div>'+
+   '<div class="f2"><div><label class="fl">Totale pagato</label>'+
+    '<input class="fi mono" id="e_s1" inputmode="decimal" value="'+String(oPaid(o).toFixed(2)).replace(".",",")+'"></div>'+
     '<div><label class="fl">Sped. Italia</label>'+
     '<input class="fi mono" id="e_s2" inputmode="decimal" value="'+
       (o.ship2paid?String(num(o.ship2).toFixed(2)).replace(".",","):"")+'" placeholder="non pagata"></div></div>'+
+   '<div><label class="fl">Articoli</label>'+o.items.map(function(it,i){
+      var sold=soldQty(o.id,it.id);
+      return '<div class="itemrow" style="margin-bottom:7px">'+
+       '<input class="fi" id="e_n'+i+'" value="'+esc(it.name)+'">'+
+       '<input class="fi mono" id="e_q'+i+'" inputmode="numeric" value="'+it.qty+'">'+
+       '<span class="tile-s" style="text-align:center">'+(sold?"−"+sold:"")+'</span>'+
+       '</div>';
+    }).join("")+
+    '<p class="tile-s">Il numero a destra sono i pezzi già venduti: sotto quello non si può scendere.</p></div>'+
    '<p class="err" id="e_err" hidden></p>'+
    '<button class="btn" id="e_go">Salva modifiche</button></div>';
   openSheet(h);
@@ -853,16 +859,15 @@ function sheetOrderEdit(id){
     for(var j=0;j<o.items.length;j++){
       o.items[j].name=v("e_n"+j).trim()||o.items[j].name;
       o.items[j].qty=Math.round(num(v("e_q"+j)));
-      o.items[j].price=num(v("e_p"+j));
     }
-    o.ship1=num(v("e_s1"));
+    o.total=num(v("e_s1"));
     var s2=v("e_s2").trim();
     if(s2===""){o.ship2=0;o.ship2paid=false;unpost("order2:"+o.id);}
     else{o.ship2=num(s2);o.ship2paid=true;}
     /* riscrivo le uscite collegate con gli importi nuovi */
     var w=o.wallet||"conto";
     unpost("order:"+o.id);
-    post(w,-(oGoods(o)+num(o.ship1)),"Ordine "+o.name,"ordine","order:"+o.id,o.date);
+    post(w,-oPaid(o),"Ordine "+o.name,"ordine","order:"+o.id,o.date);
     if(o.ship2paid){
       unpost("order2:"+o.id);
       post(w,-num(o.ship2),"Spedizione "+o.name,"spedizione","order2:"+o.id,o.date);
@@ -913,8 +918,8 @@ function vPrev(){
   var k=v("v_it").split("|"),o=find(S.orders,k[0]);if(!o)return;
   var it=find(o.items,k[1]),q=Math.round(num(v("v_q")))||1,p=num(v("v_p"));
   var c=unitCost(o,it)*q,pr=p-c;
-  el.innerHTML="Ti è costato <b>"+eur(c)+"</b>"+(oOpen(o)?" (provvisorio, manca la spedizione)":"")+
-   (p>0?" · profitto <b>"+eur(pr,true)+"</b>":"");
+  el.innerHTML="Costo medio dell'ordine: <b>"+eur(c)+"</b>"+(oOpen(o)?" (provvisorio, manca la spedizione)":"")+
+   (p>0?" · ci guadagni <b>"+eur(pr,true)+"</b>":"");
 }
 
 /* ---- promo ---- */
