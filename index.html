@@ -314,7 +314,8 @@ function catBreakdown(m){
   });
   return Object.keys(map).map(function(k){return {k:k,v:map[k]};}).sort(function(a,b){return b.v-a.v;});
 }
-function netWorth(){return balance("contanti")+balance("conto")+stockValue()-debtLeft();}
+function liquid(){return balance("contanti")+balance("conto");}      /* i soldi che hai davvero */
+function netWorth(){return liquid()+stockValue()-debtLeft();}        /* quadro completo */
 function profitMonth(){
   return S.sales.reduce(function(t,s){return monthOf(s.date)===curMonth()?t+saleProfit(s):t;},0);
 }
@@ -352,15 +353,22 @@ function header(label,title,gear){
 
 /* ---------- HOME ---------- */
 function vHome(){
-  var n=netWorth(),pb=playBalance(),pw=promoWaiting(),pm=profitMonth();
+  var n=liquid(),pb=playBalance(),pw=promoWaiting(),pm=profitMonth();
   var h=header("Ciao Carmelo","CB29 Economy",true);
-  h+='<div class="net"><div class="lab">Netto reale</div>'+
+  h+='<div class="net"><div class="lab">Soldi che hai</div>'+
      '<div class="big '+(n<0?"neg":"")+'">'+eur(n)+'</div>'+
-     '<div class="sub">Contanti + Conto + Magazzino − Debiti</div>'+
+     '<div class="sub">Contanti + Conto, niente altro</div>'+
      '<div class="chips">'+
       chip("Contanti",balance("contanti"))+chip("Conto",balance("conto"))+
-      chip("Magazzino",stockValue())+chip("Debiti",-debtLeft())+
-     '</div></div>';
+     '</div>'+
+     ((stockValue()>0||debtLeft()>0)?
+      '<div class="tile-s" style="margin-top:13px;padding-top:12px;border-top:1px solid var(--line)">'+
+       'Fuori dal conto qui sopra: '+
+       (stockValue()>0?'<b>'+eur(stockValue())+'</b> fermi in magazzino':'')+
+       (stockValue()>0&&debtLeft()>0?' e ':'')+
+       (debtLeft()>0?'<b class="neg">'+eur(debtLeft())+'</b> di debiti':'')+
+       '. Tutto insieme fa '+eur(netWorth())+'.</div>':'')+
+     '</div>';
 
   var nuovi=records()-num(S.bk);
   if(nuovi>=20){
