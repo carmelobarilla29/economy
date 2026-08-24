@@ -486,13 +486,15 @@ function vPlay(){
       chip("Questo mese",m)+
       '<div class="chip"><span>Operazioni</span><b>'+S.play.length+'</b></div>'+
      '</div></div>';
-  h+='<div class="sec"><div class="note">Il gioco resta fuori dal netto reale: i depositi escono dai tuoi soldi, i prelievi rientrano. Questo numero è la verità su quanto ti è costato finora.</div></div>';
+  h+='<div class="sec"><div class="note">Il gioco resta fuori dal netto reale. Un deposito fatto <b>adesso</b> esce dal conto o dai contanti, come è giusto. Per quello che hai giocato <b>prima</b> di usare l\'app scegli «Nessuno»: entra qui dentro senza toccare i tuoi soldi.</div></div>';
+  if(!S.play.length)
+    h+='<div class="sec"><button class="btn ghost" data-sheet="storico">Imposta la situazione di partenza</button></div>';
   h+='<div class="sec"><div class="sec-h"><h2>Movimenti gioco</h2>'+
      '<button class="link" data-sheet="play">+ Aggiungi</button></div><div class="card">'+
      (S.play.length?S.play.slice().sort(byDateDesc).map(function(p){
        return '<div class="row" data-del-play="'+p.id+'"><div class="row-i">'+(p.kind==="deposito"?"D":"P")+'</div>'+
         '<div class="row-m"><b>'+(p.kind==="deposito"?"Deposito":"Prelievo")+(p.note?" · "+esc(p.note):"")+'</b>'+
-        '<span>'+dmy(p.date)+' · '+esc(p.wallet)+'</span></div>'+
+        '<span>'+dmy(p.date)+' · '+(p.wallet==="nessuno"?"storico":esc(p.wallet))+'</span></div>'+
         '<div class="row-a '+(p.kind==="deposito"?"neg":"pos")+'">'+
         (p.kind==="deposito"?"-":"+")+eur(p.amount)+'</div></div>';
      }).join(""):'<div class="empty">Nessun movimento di gioco.</div>')+'</div></div>';
@@ -828,13 +830,22 @@ function segVal(id){var el=document.getElementById(id);var b=el&&el.querySelecto
   return b?b.getAttribute("data-s"):"";}
 
 /* ---- gioco ---- */
-function sheetPlay(){
-  openSheet('<h3>Gioco</h3><p class="hint">Solo quanto metti dentro e quanto tiri fuori.</p>'+
+function sheetPlay(storico){
+  openSheet('<h3>'+(storico?"Situazione di partenza":"Gioco")+'</h3>'+
+   '<p class="hint">'+(storico?
+     "Quanto sei sotto (o sopra) da prima di usare l'app. Non tocca contanti e conto.":
+     "Solo quanto metti dentro e quanto tiri fuori.")+'</p>'+
    '<div class="f"><div><label class="fl">Cosa</label><div class="seg" id="g_k">'+
-    '<button class="on" data-s="deposito">Deposito</button><button data-s="prelievo">Prelievo</button></div></div>'+
+    '<button class="on" data-s="deposito">'+(storico?"Sono sotto":"Deposito")+'</button>'+
+    '<button data-s="prelievo">'+(storico?"Sono sopra":"Prelievo")+'</button></div></div>'+
    '<div><label class="fl">Importo</label><input class="fi mono" id="g_a" inputmode="decimal" placeholder="0,00"></div>'+
-   '<div class="f2"><div><label class="fl">Da / verso</label>'+walletSel("g_w","conto")+'</div>'+
-    '<div><label class="fl">Data</label>'+dateIn("g_d")+'</div></div>'+
+   '<div><label class="fl">Soldi presi da</label><select class="fi" id="g_w">'+
+    '<option value="conto"'+(storico?"":" selected")+'>Conto</option>'+
+    '<option value="contanti">Contanti</option>'+
+    '<option value="nessuno"'+(storico?" selected":"")+'>Nessuno — è già successo prima</option>'+
+    '</select>'+
+    '<p class="tile-s" style="margin:7px 0 0">Scegli <b>Nessuno</b> per i soldi giocati in passato: entrano nel saldo del gioco ma non toccano i tuoi portafogli.</p></div>'+
+   '<div><label class="fl">Data</label>'+dateIn("g_d")+'</div>'+
    '<div><label class="fl">Nota</label><input class="fi" id="g_n" placeholder="es. Sisal"></div>'+
    '<p class="err" id="g_err" hidden></p>'+
    '<button class="btn" id="g_go">Registra</button></div>');
@@ -844,8 +855,9 @@ function sheetPlay(){
     var k=segVal("g_k");
     var p={id:uid(),kind:k,amount:a,wallet:v("g_w"),date:vd("g_d"),note:v("g_n").trim()};
     S.play.push(p);
-    post(p.wallet,k==="deposito"?-a:a,(k==="deposito"?"Deposito gioco":"Prelievo gioco")+
-      (p.note?" · "+p.note:""),"gioco","play:"+p.id,p.date);
+    if(p.wallet!=="nessuno")
+      post(p.wallet,k==="deposito"?-a:a,(k==="deposito"?"Deposito gioco":"Prelievo gioco")+
+        (p.note?" · "+p.note:""),"gioco","play:"+p.id,p.date);
     save();closeSheet();render();
     toast(k==="deposito"?"Deposito registrato":"Prelievo registrato");
   });
@@ -911,7 +923,8 @@ document.getElementById("fab").onclick=sheetAdd;
 document.getElementById("scrim").onclick=closeSheet;
 
 var SHEETS={spesa:function(){sheetFlow("spesa");},entrata:function(){sheetFlow("entrata");},
-  order:sheetOrder,sale:function(){sheetSale();},promo:sheetPromo,play:sheetPlay,debt:sheetDebt};
+  order:sheetOrder,sale:function(){sheetSale();},promo:sheetPromo,
+  play:function(){sheetPlay(false);},storico:function(){sheetPlay(true);},debt:sheetDebt};
 
 document.addEventListener("click",function(e){
   var t=e.target;
