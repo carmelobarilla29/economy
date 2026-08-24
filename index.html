@@ -191,8 +191,10 @@ h4.sub{font-family:var(--ff-d);font-size:12px;font-weight:700;letter-spacing:.1e
 "use strict";
 /* ============================ STATO ============================ */
 var KEY="cb29economy.v1";
+var TOKEN_EUR=30/7600; /* 7600 isytoken = 30 € */
 var CATS=["Vestiti","Fornitori cinesi","Casa","Regali","Cura personale","Cibo","Abbonamenti","Altro"];
-var blank={v:1,ledger:[],orders:[],sales:[],promos:[],play:[],debts:[]};
+var CATS_IN=["Vendita","Promo","Regalo","Paghetta","Rimborso","Altro"];
+var blank={v:1,ledger:[],orders:[],sales:[],promos:[],play:[],debts:[],bk:0};
 var S=load();
 
 function load(){
@@ -200,10 +202,18 @@ function load(){
     if(!r){var legacy=localStorage.getItem("soldicamera.v1");
       if(legacy){localStorage.setItem(KEY,legacy);r=legacy;}}
     if(!r)return JSON.parse(JSON.stringify(blank));
-    var d=JSON.parse(r);for(var k in blank)if(!(k in d))d[k]=Array.isArray(blank[k])?[]:blank[k];return d;}
+    var d=JSON.parse(r);for(var k in blank)if(!(k in d))d[k]=Array.isArray(blank[k])?[]:blank[k];
+    ["ledger","orders","sales","promos","play","debts"].forEach(function(k){if(!Array.isArray(d[k]))d[k]=[];});
+    d.sales=d.sales.filter(function(x){
+      var o=null,i;for(i=0;i<d.orders.length;i++)if(d.orders[i].id===x.oid)o=d.orders[i];
+      if(!o)return false;
+      for(i=0;i<o.items.length;i++)if(o.items[i].id===x.iid)return true;
+      return false;});
+    return d;}
   catch(e){return JSON.parse(JSON.stringify(blank));}
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast("Spazio esaurito: fai un backup");}}
+function records(){return S.ledger.length+S.orders.length+S.sales.length+S.promos.length+S.play.length+S.debts.length;}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 
 /* ============================ UTIL ============================ */
@@ -233,8 +243,8 @@ function toast(m){var t=document.getElementById("toast");t.textContent=m;t.class
 
 /* ============================ LEDGER ============================ */
 /* ogni evento che muove soldi veri scrive qui */
-function post(wallet,amount,label,kind,ref,date){
-  S.ledger.push({id:uid(),w:wallet,a:amount,l:label,k:kind,ref:ref||null,d:date||today()});
+function post(wallet,amount,label,kind,ref,date,cat){
+  S.ledger.push({id:uid(),w:wallet,a:amount,l:label,k:kind,ref:ref||null,d:date||today(),c:cat||""});
 }
 function unpost(ref){S.ledger=S.ledger.filter(function(e){return e.ref!==ref;});}
 function balance(w){return S.ledger.reduce(function(t,e){return e.w===w?t+e.a:t;},0);}
@@ -247,7 +257,7 @@ function oCost(o){return oGoods(o)+oShip(o);}
 function oOpen(o){return !o.ship2paid;}
 function unitCost(o,it){var p=oPieces(o);return it.price+(p?oShip(o)/p:0);}
 function soldQty(oid,iid){return S.sales.reduce(function(t,s){return (s.oid===oid&&s.iid===iid)?t+s.qty:t;},0);}
-function leftQty(o,it){return it.qty-soldQty(o.id,it.id);}
+function leftQty(o,it){return Math.max(0,it.qty-soldQty(o.id,it.id));}
 function oRevenue(oid){return S.sales.reduce(function(t,s){return s.oid===oid?t+s.price:t;},0);}
 function stockValue(){
   return S.orders.reduce(function(t,o){
@@ -259,8 +269,8 @@ function stockPieces(){
     return t+o.items.reduce(function(u,it){return u+leftQty(o,it);},0);},0);
 }
 function saleProfit(s){
-  var o=find(S.orders,s.oid);if(!o)return s.price;
-  var it=find(o.items,s.iid);if(!it)return s.price;
+  var o=find(S.orders,s.oid);if(!o)return 0;
+  var it=find(o.items,s.iid);if(!it)return 0;
   return s.price-unitCost(o,it)*s.qty;
 }
 function find(arr,id){for(var i=0;i<arr.length;i++)if(arr[i].id===id)return arr[i];return null;}
@@ -272,8 +282,30 @@ function playMonth(){return S.play.reduce(function(t,p){
   return monthOf(p.date)===curMonth()?t+(p.kind==="prelievo"?p.amount:-p.amount):t;},0);}
 function promoWaiting(){return S.promos.reduce(function(t,p){
   return (p.status==="accreditato"||p.status==="convertito")?t+num(p.value):t;},0);}
+function promoTokens(){return S.promos.reduce(function(t,p){
+  return p.status==="accreditato"?t+(num(p.tokens)||0):t;},0);}
 function promoTotal(){return S.promos.reduce(function(t,p){
   return (p.status==="invitato"||p.status==="registrato")?t:t+num(p.value);},0);}
+function monthInOut(m){
+  var i=0,u=0,adj=0;
+  S.ledger.forEach(function(e){
+    if(monthOf(e.d)!==m)return;
+    if(e.k==="giro")return;              /* spostare soldi non e ne entrata ne spesa */
+    if(e.k==="rettifica"){adj+=e.a;return;}
+    if(e.a>0)i+=e.a;else u+=e.a;
+  });
+  return {in:i,out:u,adj:adj};
+}
+function catBreakdown(m){
+  var map={};
+  S.ledger.forEach(function(e){
+    if(monthOf(e.d)!==m||e.a>=0||e.k==="giro")return;
+    var k=e.c||({ordine:"Ordini fornitore",spedizione:"Ordini fornitore",rata:"Rate e debiti",
+      gioco:"Gioco",vendita:"Vendite",rettifica:"Correzioni"}[e.k]||"Altro");
+    map[k]=(map[k]||0)+Math.abs(e.a);
+  });
+  return Object.keys(map).map(function(k){return {k:k,v:map[k]};}).sort(function(a,b){return b.v-a.v;});
+}
 function netWorth(){return balance("contanti")+balance("conto")+stockValue()-debtLeft();}
 function profitMonth(){
   return S.sales.reduce(function(t,s){return monthOf(s.date)===curMonth()?t+saleProfit(s):t;},0);
@@ -322,6 +354,13 @@ function vHome(){
       chip("Magazzino",stockValue())+chip("Debiti",-debtLeft())+
      '</div></div>';
 
+  var nuovi=records()-num(S.bk);
+  if(nuovi>=20){
+    h+='<div class="sec"><div class="note" style="display:flex;align-items:center;gap:12px">'+
+      '<span style="flex:1">Hai aggiunto <b>'+nuovi+'</b> cose dall\'ultimo backup. I dati stanno solo in questo telefono: copiane una copia nelle Note.</span>'+
+      '<button class="btn" data-go="backup" style="width:auto;padding:10px 14px;font-size:13px">Backup</button>'+
+      '</div></div>';
+  }
   if(!S.ledger.length&&!S.promos.length&&!S.orders.length){
     h+='<div class="sec"><div class="card">'+
       '<b style="font-family:var(--ff-d);font-size:15.5px">Si parte da qui</b>'+
@@ -365,7 +404,8 @@ function chip(l,v){return '<div class="chip"><span>'+l+'</span><b class="'+(v<0?
 function byDateDesc(a,b){return (b.d||b.date||"").localeCompare(a.d||a.date||"")|| (b.id>a.id?1:-1);}
 function ledRow(e){
   return '<div class="row" data-del-led="'+e.id+'"><div class="row-i">'+esc((e.k||"?").slice(0,1).toUpperCase())+'</div>'+
-   '<div class="row-m"><b>'+esc(e.l)+'</b><span>'+dmy(e.d)+' · '+esc(e.w)+'</span></div>'+
+   '<div class="row-m"><b>'+esc(e.l)+'</b><span>'+dmy(e.d)+' · '+esc(e.w)+
+     (e.c&&e.c!==e.l?' · '+esc(e.c):'')+'</span></div>'+
    '<div class="row-a '+(e.a<0?"neg":"pos")+'">'+eur(e.a,true)+'</div></div>';
 }
 
@@ -379,14 +419,35 @@ function vMov(){
      '<button class="tile" data-adj="conto"><div class="tile-t">Conto</div><div class="tile-v '+
        (balance("conto")<0?"neg":"")+'">'+eur0(balance("conto"))+'</div>'+
        '<div class="tile-s">tocca per correggere</div></button></div>';
+  var br=catBreakdown(curMonth());
+  if(br.length){
+    var maxv=br[0].v,tot=br.reduce(function(t,x){return t+x.v;},0);
+    h+='<div class="sec"><div class="sec-h"><h2>Dove vanno i soldi</h2>'+
+      '<span class="mono neg" style="font-size:13px;font-weight:600">'+eur(-tot)+'</span></div>'+
+      '<div class="card">'+br.slice(0,8).map(function(x){
+        return '<div style="padding:8px 0">'+
+          '<div style="display:flex;justify-content:space-between;gap:10px;font-size:13.5px">'+
+          '<span>'+esc(x.k)+'</span><b class="mono">'+eur(x.v)+'</b></div>'+
+          '<div class="bar" style="margin-top:6px"><i style="width:'+
+            Math.round(x.v/maxv*100)+'%"></i></div></div>';
+      }).join("")+'<div class="tile-s" style="margin-top:8px">Uscite di '+monthName()+'</div></div></div>';
+  }
   var g={},L=S.ledger.slice().sort(byDateDesc);
   L.forEach(function(e){var m=monthOf(e.d);(g[m]=g[m]||[]).push(e);});
   var keys=Object.keys(g).sort().reverse();
   if(!keys.length)h+='<div class="sec"><div class="card"><div class="empty">Nessun movimento.<br>Tocca <b>+</b> per iniziare.</div></div></div>';
   keys.forEach(function(m){
-    var tot=g[m].reduce(function(t,e){return t+e.a;},0);
+    var io=monthInOut(m),tot=io.in+io.out+io.adj;
     h+='<div class="sec"><div class="sec-h"><h2>'+labMonth(m)+'</h2>'+
        '<span class="mono '+(tot<0?"neg":"pos")+'" style="font-size:13px;font-weight:600">'+eur(tot,true)+'</span></div>'+
+       '<div class="card" style="padding:11px 14px;margin-bottom:9px">'+
+        '<div style="display:flex;justify-content:space-between;font-size:13px">'+
+        '<span class="mut">Entrate</span><b class="mono pos">'+eur(io.in,true)+'</b></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:5px">'+
+        '<span class="mut">Uscite</span><b class="mono neg">'+eur(io.out)+'</b></div>'+
+        (io.adj?'<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:5px">'+
+          '<span class="mut">Correzioni di saldo</span><b class="mono '+(io.adj<0?"neg":"pos")+'">'+
+          eur(io.adj,true)+'</b></div>':'')+'</div>'+
        '<div class="card">'+g[m].map(ledRow).join("")+'</div></div>';
   });
   h+='<p class="empty" style="font-size:12px">Tocca un movimento per eliminarlo.</p>';
@@ -446,7 +507,11 @@ function vPromo(){
   h+='<div class="net" style="border-radius:var(--r)"><div class="lab">Guadagnato con le promo</div>'+
      '<div class="big acc" style="font-size:36px">'+eur(promoTotal())+'</div>'+
      '<div class="chips">'+chip("Buoni da usare",promoWaiting())+
-      '<div class="chip"><span>Persone</span><b>'+S.promos.length+'</b></div></div></div>';
+      '<div class="chip"><span>Token da convertire</span><b>'+
+        promoTokens().toLocaleString("it-IT")+'</b></div>'+
+      '<div class="chip"><span>Persone</span><b>'+S.promos.length+'</b></div>'+
+      '<div class="chip"><span>Valore token</span><b>'+eur(promoTokens()*TOKEN_EUR)+'</b></div>'+
+      '</div></div>';
   var g={},P=S.promos.slice().sort(byDateDesc);
   P.forEach(function(p){var m=monthOf(p.date)||"0000-00";(g[m]=g[m]||[]).push(p);});
   var keys=Object.keys(g).sort().reverse();
@@ -461,7 +526,7 @@ function vPromo(){
         var cls=p.status==="speso"?"ok":(p.status==="accreditato"||p.status==="convertito")?"wait":"off";
         return '<div class="row" data-promo="'+p.id+'"><div class="row-i">'+esc(p.person.slice(0,1).toUpperCase())+'</div>'+
           '<div class="row-m"><b>'+esc(p.person)+'</b><span>'+dmy(p.date)+' · '+esc(p.type)+
-            (p.tokens?' · '+p.tokens+' token':'')+
+            (p.tokens?' · '+num(p.tokens).toLocaleString("it-IT")+' token':'')+
             (p.into?' → '+esc(p.into):'')+'</span></div>'+
           '<div class="row-r"><div class="row-a acc">'+eur0(num(p.value))+'</div>'+
           '<span class="pill '+cls+'">'+esc(p.status)+'</span></div></div>';
@@ -569,16 +634,17 @@ function sheetAdd(){
   var acts=[
    ["spesa","Spesa","Qualcosa che hai comprato","#F2705E"],
    ["entrata","Entrata","Soldi che ti sono arrivati","#46C98B"],
+   ["giro","Giro di soldi","Da contanti a conto o viceversa","#9AA3B2","⇄"],
    ["sale","Vendita","Hai venduto un pezzo del magazzino","#E3A84A"],
    ["order","Ordine fornitore","Nuovo stock dalla Cina","#E3A84A"],
    ["promo","Promo","Hai portato una persona","#E3A84A"],
-   ["play","Gioco","Deposito o prelievo","#C77DFF"],
+   ["play","Gioco","Deposito o prelievo","#C77DFF","G"],
    ["debt","Debito o rata","Klarna e simili","#9AA3B2"]
   ];
   openSheet('<h3>Cosa registri?</h3><p class="hint">Scegli e in due tocchi è fatto.</p>'+
    acts.map(function(a){
      return '<button class="act" data-sheet="'+a[0]+'">'+
-      '<i style="background:'+a[3]+'22;color:'+a[3]+'">'+a[1].slice(0,1)+'</i>'+
+      '<i style="background:'+a[3]+'22;color:'+a[3]+'">'+(a[4]||a[1].slice(0,1))+'</i>'+
       '<span style="flex:1"><b>'+a[1]+'</b><span>'+a[2]+'</span></span></button>';
    }).join(""));
 }
@@ -592,7 +658,7 @@ function sheetFlow(kind){
     '<div><label class="fl">Importo</label><input class="fi mono" id="f_amt" inputmode="decimal" placeholder="0,00"></div>'+
     '<div><label class="fl">Descrizione</label><input class="fi" id="f_lab" placeholder="'+(isOut?"es. tuta Adidas":"es. regalo nonna")+'"></div>'+
     '<div class="f2"><div><label class="fl">Categoria</label><select class="fi" id="f_cat">'+
-      CATS.map(function(c){return '<option>'+c+'</option>';}).join("")+'</select></div>'+
+      (isOut?CATS:CATS_IN).map(function(c){return '<option>'+c+'</option>';}).join("")+'</select></div>'+
      '<div><label class="fl">Portafoglio</label>'+walletSel("f_w","contanti")+'</div></div>'+
     '<div><label class="fl">Data</label>'+dateIn("f_d")+'</div>'+
     '<p class="err" id="f_err" hidden></p>'+
@@ -601,11 +667,33 @@ function sheetFlow(kind){
     var a=num(v("f_amt"));
     if(a<=0)return showErr("f_err","Metti un importo maggiore di zero.");
     var lab=v("f_lab").trim()||v("f_cat");
-    post(v("f_w"),isOut?-a:a,lab,isOut?"spesa":"entrata",null,vd("f_d"));
+    post(v("f_w"),isOut?-a:a,lab,isOut?"spesa":"entrata",null,vd("f_d"),v("f_cat"));
     save();closeSheet();render();toast(isOut?"Spesa registrata":"Entrata registrata");
   });
 }
-function showErr(id,m){var e=document.getElementById(id);e.textContent=m;e.hidden=false;}
+function showErr(id,m){var e=document.getElementById(id);if(e){e.textContent=m;e.hidden=false;}BUSY=false;}
+
+/* ---- giro tra contanti e conto ---- */
+function sheetGiro(){
+  openSheet('<h3>Giro di soldi</h3><p class="hint">Sposti soldi tra contanti e conto. Il totale non cambia.</p>'+
+   '<div class="f"><div class="f2">'+
+    '<div><label class="fl">Da</label>'+walletSel("t_from","contanti")+'</div>'+
+    '<div><label class="fl">A</label>'+walletSel("t_to","conto")+'</div></div>'+
+   '<div><label class="fl">Importo</label>'+
+    '<input class="fi mono" id="t_amt" inputmode="decimal" placeholder="0,00"></div>'+
+   '<div><label class="fl">Data</label>'+dateIn("t_d")+'</div>'+
+   '<p class="err" id="t_err" hidden></p>'+
+   '<button class="btn" id="t_go">Sposta</button></div>');
+  bind("t_go",function(){
+    var a=num(v("t_amt")),f=v("t_from"),to=v("t_to");
+    if(a<=0)return showErr("t_err","Metti un importo maggiore di zero.");
+    if(f===to)return showErr("t_err","Scegli due portafogli diversi.");
+    var g="giro:"+uid(),d=vd("t_d");
+    post(f,-a,"Giro verso "+to,"giro",g,d);
+    post(to,a,"Giro da "+f,"giro",g,d);
+    save();closeSheet();render();toast("Soldi spostati");
+  });
+}
 
 /* ---- rettifica saldo ---- */
 function sheetAdjust(w){
@@ -719,15 +807,68 @@ function sheetOrderDetail(id){
      '<div><label class="fl">Pagato da</label>'+walletSel("s2_w","conto")+'</div>'+
      '<button class="btn" id="s2_go">Paga e chiudi l\'ordine</button></div></div>';
   }
-  h+='<div style="margin-top:16px"><button class="btn danger" data-delorder="'+o.id+'">Elimina ordine</button></div>';
+  h+='<div style="margin-top:16px;display:flex;gap:9px">'+
+     '<button class="btn ghost" data-editorder="'+o.id+'">Modifica</button>'+
+     '<button class="btn danger" data-delorder="'+o.id+'">Elimina</button></div>';
   openSheet(h);
-  var g=document.getElementById("s2_go");
-  if(g)g.onclick=function(){
-    var a=num(v("s2_amt"));if(a<=0)return toast("Metti l'importo della spedizione");
+  bind("s2_go",function(){
+    var a=num(v("s2_amt"));if(a<=0)return fail("Metti l'importo della spedizione");
     o.ship2=a;o.ship2paid=true;
     post(v("s2_w"),-a,"Spedizione "+o.name,"spedizione","order2:"+o.id,today());
     save();closeSheet();render();toast("Costi aggiornati");
-  };
+  });
+}
+
+/* ---- modifica ordine ---- */
+function sheetOrderEdit(id){
+  var o=find(S.orders,id);if(!o)return;
+  var h='<h3>Modifica ordine</h3><p class="hint">Correggi prezzi, quantità e spedizioni. I costi si ricalcolano.</p>'+
+   '<div class="f"><div><label class="fl">Nome</label>'+
+   '<input class="fi" id="e_name" value="'+esc(o.name)+'"></div>'+
+   '<div><label class="fl">Articoli</label>'+o.items.map(function(it,i){
+      var sold=soldQty(o.id,it.id);
+      return '<div style="margin-bottom:9px">'+
+       '<input class="fi" id="e_n'+i+'" value="'+esc(it.name)+'" style="margin-bottom:6px">'+
+       '<div class="f2"><input class="fi mono" id="e_q'+i+'" inputmode="numeric" value="'+it.qty+'">'+
+       '<input class="fi mono" id="e_p'+i+'" inputmode="decimal" value="'+
+         String(it.price.toFixed(2)).replace(".",",")+'"></div>'+
+       (sold?'<div class="tile-s" style="margin-top:4px">'+sold+' già venduti: la quantità non può scendere sotto</div>':'')+
+       '</div>';
+    }).join("")+'</div>'+
+   '<div class="f2"><div><label class="fl">Sped. magazzino</label>'+
+    '<input class="fi mono" id="e_s1" inputmode="decimal" value="'+String(num(o.ship1).toFixed(2)).replace(".",",")+'"></div>'+
+    '<div><label class="fl">Sped. Italia</label>'+
+    '<input class="fi mono" id="e_s2" inputmode="decimal" value="'+
+      (o.ship2paid?String(num(o.ship2).toFixed(2)).replace(".",","):"")+'" placeholder="non pagata"></div></div>'+
+   '<p class="err" id="e_err" hidden></p>'+
+   '<button class="btn" id="e_go">Salva modifiche</button></div>';
+  openSheet(h);
+  bind("e_go",function(){
+    for(var i=0;i<o.items.length;i++){
+      var q=Math.round(num(v("e_q"+i))),sold=soldQty(o.id,o.items[i].id);
+      if(q<sold)return showErr("e_err","«"+o.items[i].name+"»: hai già venduto "+sold+" pezzi, la quantità non può essere "+q+".");
+      if(q<0)return showErr("e_err","Le quantità non possono essere negative.");
+    }
+    o.name=v("e_name").trim()||o.name;
+    for(var j=0;j<o.items.length;j++){
+      o.items[j].name=v("e_n"+j).trim()||o.items[j].name;
+      o.items[j].qty=Math.round(num(v("e_q"+j)));
+      o.items[j].price=num(v("e_p"+j));
+    }
+    o.ship1=num(v("e_s1"));
+    var s2=v("e_s2").trim();
+    if(s2===""){o.ship2=0;o.ship2paid=false;unpost("order2:"+o.id);}
+    else{o.ship2=num(s2);o.ship2paid=true;}
+    /* riscrivo le uscite collegate con gli importi nuovi */
+    var w=o.wallet||"conto";
+    unpost("order:"+o.id);
+    post(w,-(oGoods(o)+num(o.ship1)),"Ordine "+o.name,"ordine","order:"+o.id,o.date);
+    if(o.ship2paid){
+      unpost("order2:"+o.id);
+      post(w,-num(o.ship2),"Spedizione "+o.name,"spedizione","order2:"+o.id,o.date);
+    }
+    save();closeSheet();render();toast("Ordine aggiornato");
+  });
 }
 
 /* ---- vendita ---- */
@@ -756,7 +897,7 @@ function sheetSale(pre){
     document.getElementById(id).onchange=vPrev;});
   vPrev();
   bind("v_go",function(){
-    var k=v("v_it").split("|"),o=find(S.orders,k[0]);if(!o)return;
+    var k=v("v_it").split("|"),o=find(S.orders,k[0]);if(!o){BUSY=false;return;}
     var it=find(o.items,k[1]),q=Math.round(num(v("v_q"))),p=num(v("v_p"));
     if(q<1)return showErr("v_err","La quantità deve essere almeno 1.");
     if(q>leftQty(o,it))return showErr("v_err","Hai solo "+leftQty(o,it)+" pezzi disponibili.");
@@ -783,29 +924,57 @@ function sheetPromo(){
    '<div class="f2"><div><label class="fl">Promo</label><select class="fi" id="p_t">'+
      '<option>isybank</option><option>Revolut</option><option>Altra</option></select></div>'+
     '<div><label class="fl">Data</label>'+dateIn("p_d")+'</div></div>'+
-   '<div class="f2"><div><label class="fl">Valore in €</label>'+
-     '<input class="fi mono" id="p_v" inputmode="decimal" placeholder="30"></div>'+
-    '<div><label class="fl">Token (se ci sono)</label>'+
-     '<input class="fi mono" id="p_k" inputmode="numeric" placeholder="7600"></div></div>'+
+   '<div class="f2"><div><label class="fl">Token</label>'+
+     '<input class="fi mono" id="p_k" inputmode="numeric" placeholder="7600"></div>'+
+    '<div><label class="fl">Valore in €</label>'+
+     '<input class="fi mono" id="p_v" inputmode="decimal" placeholder="30"></div></div>'+
+   '<div class="tile-s" id="p_calc">7600 token = 30 €. Scrivi i token e il valore si compila da solo.</div>'+
    '<div><label class="fl">A che punto sta</label><div class="seg" id="p_s">'+
      '<button data-s="invitato">Invitato</button><button data-s="registrato">Registrato</button>'+
      '<button class="on" data-s="accreditato">Accreditato</button></div></div>'+
    '<div class="note">Doppia quota: se la fai a un familiare che vive con te prendi sia la tua che la sua, quindi metti il valore doppio.</div>'+
    '<p class="err" id="p_err" hidden></p>'+
-   '<button class="btn" id="p_go">Aggiungi</button></div>');
+   '<button class="btn" id="p_go">Aggiungi</button>'+
+   '<button class="btn ghost" id="p_go2">Aggiungi e continua</button></div>');
   segify("p_s");
+  document.getElementById("p_k").oninput=function(){
+    var k=num(this.value);
+    if(k>0){document.getElementById("p_v").value=(k*TOKEN_EUR).toFixed(2).replace(".",",");}
+    document.getElementById("p_calc").textContent=k>0?
+      (k.toLocaleString("it-IT")+" token valgono "+eur(k*TOKEN_EUR)):
+      "7600 token = 30 €. Scrivi i token e il valore si compila da solo.";
+  };
+  function addPromo(){
+    var n=v("p_n").trim();if(!n){showErr("p_err","Scrivi il nome della persona.");return false;}
+    var tk=Math.round(num(v("p_k"))),val=num(v("p_v"));
+    if(!val&&tk)val=tk*TOKEN_EUR;
+    S.promos.push({id:uid(),person:n,type:v("p_t"),date:vd("p_d"),value:val,
+      tokens:tk,status:segVal("p_s"),into:""});
+    save();return true;
+  }
   bind("p_go",function(){
-    var n=v("p_n").trim();if(!n)return showErr("p_err","Scrivi il nome della persona.");
-    S.promos.push({id:uid(),person:n,type:v("p_t"),date:vd("p_d"),value:num(v("p_v")),
-      tokens:Math.round(num(v("p_k"))),status:segVal("p_s"),into:""});
-    save();closeSheet();render();toast("Promo aggiunta");
+    if(!addPromo())return;
+    closeSheet();render();toast("Promo aggiunta");
+  });
+  bind("p_go2",function(){
+    if(!addPromo())return;
+    var el=document.getElementById("p_n");
+    el.value="";el.focus();
+    document.getElementById("p_err").hidden=true;
+    toast("Aggiunta. Scrivi la prossima.");
   });
 }
 function sheetPromoDetail(id){
   var p=find(S.promos,id);if(!p)return;
-  var h='<h3>'+esc(p.person)+'</h3><p class="hint">'+esc(p.type)+' · '+dmy(p.date)+' · '+eur(num(p.value))+
-    (p.tokens?' · '+p.tokens+' token':'')+'</p>'+
-   '<div class="f"><div><label class="fl">A che punto sta</label>'+
+  var h='<h3>'+esc(p.person)+'</h3><p class="hint">'+esc(p.type)+' · '+dmy(p.date)+'</p>'+
+   '<div class="f">'+
+   '<div class="f2"><div><label class="fl">Token</label>'+
+    '<input class="fi mono" id="d_k" inputmode="numeric" value="'+esc(p.tokens||"")+'"></div>'+
+    '<div><label class="fl">Valore in €</label>'+
+    '<input class="fi mono" id="d_v" inputmode="decimal" value="'+
+      (num(p.value)?String(num(p.value).toFixed(2)).replace(".",","):"")+'"></div></div>'+
+   '<div class="tile-s" id="d_calc"></div>'+
+   '<div><label class="fl">A che punto sta</label>'+
     '<select class="fi" id="d_s">'+
     ["invitato","registrato","accreditato","convertito","speso"].map(function(x){
       return '<option'+(p.status===x?" selected":"")+'>'+x+'</option>';}).join("")+
@@ -816,8 +985,22 @@ function sheetPromoDetail(id){
    '<button class="btn" id="d_go">Salva</button>'+
    '<button class="btn danger" data-delpromo="'+p.id+'">Elimina</button></div>';
   openSheet(h);
+  var dk=document.getElementById("d_k");
+  function dcalc(){
+    var k=num(dk.value);
+    document.getElementById("d_calc").textContent=k>0?
+      (k.toLocaleString("it-IT")+" token valgono "+eur(k*TOKEN_EUR)):"7600 token = 30 €.";
+  }
+  dk.oninput=function(){
+    var k=num(this.value);
+    if(k>0)document.getElementById("d_v").value=(k*TOKEN_EUR).toFixed(2).replace(".",",");
+    dcalc();
+  };
+  dcalc();
   bind("d_go",function(){
-    p.status=v("d_s");p.into=v("d_into").trim();
+    var tk=Math.round(num(v("d_k"))),val=num(v("d_v"));
+    if(!val&&tk)val=tk*TOKEN_EUR;
+    p.tokens=tk;p.value=val;p.status=v("d_s");p.into=v("d_into").trim();
     save();closeSheet();render();toast("Aggiornato");
   });
 }
@@ -888,7 +1071,7 @@ function sheetPay(id){
    '<div><label class="fl">Pagata da</label>'+walletSel("r_w","conto")+'</div>'+
    '<button class="btn" id="r_go">Registra pagamento</button></div>');
   bind("r_go",function(){
-    var a=num(v("r_a"));if(a<=0)return toast("Metti l'importo della rata");
+    var a=num(v("r_a"));if(a<=0)return fail("Metti l'importo della rata");
     d.left=Math.max(0,num(d.left)-a);
     post(v("r_w"),-a,"Rata "+d.name,"rata","rata:"+d.id+":"+a,today());
     save();closeSheet();render();toast("Rata registrata");
@@ -908,22 +1091,24 @@ function ask(title,text,okLabel,onOk){
   w.onclick=function(e){if(e.target===w)w.classList.remove("on");};
 }
 /* ---- un tocco = una registrazione, anche se tocchi due volte ---- */
+var BUSY=false;
 function bind(id,fn){
   var el=document.getElementById(id);if(!el)return;
-  var busy=false;
   el.onclick=function(){
-    if(busy)return;busy=true;
-    setTimeout(function(){busy=false;},500);
+    if(BUSY)return;
+    BUSY=true;setTimeout(function(){BUSY=false;},500);
     fn();
   };
 }
+/* se la registrazione non va a buon fine sblocco subito: puoi correggere e riprovare */
+function fail(m){toast(m);BUSY=false;}
 
 /* ============================ EVENTI ============================ */
 document.getElementById("fab").onclick=sheetAdd;
 document.getElementById("scrim").onclick=closeSheet;
 
 var SHEETS={spesa:function(){sheetFlow("spesa");},entrata:function(){sheetFlow("entrata");},
-  order:sheetOrder,sale:function(){sheetSale();},promo:sheetPromo,
+  giro:sheetGiro,order:sheetOrder,sale:function(){sheetSale();},promo:sheetPromo,
   play:function(){sheetPlay(false);},storico:function(){sheetPlay(true);},debt:sheetDebt};
 
 document.addEventListener("click",function(e){
@@ -932,6 +1117,9 @@ document.addEventListener("click",function(e){
   var g=t.closest("[data-go]");if(g)return go(g.getAttribute("data-go"));
   var sh=t.closest("[data-sheet]");if(sh){var f=SHEETS[sh.getAttribute("data-sheet")];if(f)f();return;}
   var adj=t.closest("[data-adj]");if(adj)return sheetAdjust(adj.getAttribute("data-adj"));
+  var oe=t.closest("[data-editorder]");
+  if(oe){var oid2=oe.getAttribute("data-editorder");closeSheet();
+    setTimeout(function(){sheetOrderEdit(oid2);},280);return;}
   var od=t.closest("[data-order]");if(od)return sheetOrderDetail(od.getAttribute("data-order"));
   var sl=t.closest("[data-sell]");if(sl){closeSheet();setTimeout(function(){sheetSale(sl.getAttribute("data-sell"));},280);return;}
   var pr=t.closest("[data-promo]");if(pr)return sheetPromoDetail(pr.getAttribute("data-promo"));
@@ -942,8 +1130,14 @@ document.addEventListener("click",function(e){
     var lid=dl.getAttribute("data-del-led"),en=null;
     for(var i=0;i<S.ledger.length;i++)if(S.ledger[i].id===lid)en=S.ledger[i];
     if(!en)return;
-    if(en.ref&&en.k!=="rata")
+    if(en.ref&&en.k!=="rata"&&en.k!=="giro")
       return toast("Questo si elimina dalla sua sezione: ordine, vendita o gioco");
+    if(en.k==="giro"){
+      ask("Eliminare il giro?","Spariscono tutte e due le righe, l'uscita e l'entrata.","Elimina",function(){
+        unpost(en.ref);save();render();toast("Giro eliminato");
+      });
+      return;
+    }
     ask("Eliminare?","«"+en.l+"» da "+eur(en.a,true)+". Non si torna indietro.","Elimina",function(){
       if(en.k==="rata"&&en.ref){
         var pr=String(en.ref).split(":"),d=find(S.debts,pr[1]);
@@ -1007,9 +1201,10 @@ document.addEventListener("click",function(e){
   if(t.id==="bkCopy"){
     var ta=document.getElementById("bkOut");
     if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(ta.value).then(function(){toast("Backup copiato: incollalo nelle Note");},
+      navigator.clipboard.writeText(ta.value).then(function(){
+        S.bk=records();save();render();toast("Backup copiato: incollalo nelle Note");},
         function(){ta.select();toast("Tieni premuto sul testo e copia");});
-    }else{ta.select();ta.setSelectionRange(0,999999);toast("Tieni premuto sul testo e copia");}
+    }else{ta.select();ta.setSelectionRange(0,999999);S.bk=records();save();toast("Tieni premuto sul testo e copia");}
     return;
   }
   if(t.id==="bkRestore"){
