@@ -162,6 +162,9 @@ select.fi{appearance:none;background-image:linear-gradient(45deg,transparent 50%
 .act b{display:block;font-size:14.5px;font-weight:500}
 .act span{font-size:12.5px;color:var(--tx-2)}
 .err{color:var(--neg);font-size:13px;margin:0}
+.tile-s{font-size:12px;color:var(--tx-2);line-height:1.5;margin:0}
+.pill{display:inline-block;padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:500;white-space:nowrap}
+.pill.ok{background:var(--pos-soft);color:var(--pos)}
 .note{background:var(--surf);border:1px solid var(--line);border-radius:var(--r-sm);
   padding:13px 15px;font-size:12.5px;color:var(--tx-2);line-height:1.55}
 .note b{color:#C6CBD5;font-weight:600}
@@ -248,27 +251,32 @@ var CATS_IN=["Vendita","Promo","Regalo","Paghetta","Rimborso","Altro"];
 var blank={v:1,ledger:[],orders:[],sales:[],promos:[],play:[],debts:[],bk:0};
 var S=load();
 
+/* rimette a posto i dati letti da fuori: all'avvio e quando ripristina un backup.
+   Serve a non ritrovarsi mezza app rotta se il testo incollato e' arrivato monco. */
+function normalize(d){
+  for(var k in blank)if(!(k in d))d[k]=Array.isArray(blank[k])?[]:blank[k];
+  ["ledger","orders","sales","promos","play","debts"].forEach(function(k){if(!Array.isArray(d[k]))d[k]=[];});
+  d.orders.forEach(function(o){
+    if(!Array.isArray(o.items))o.items=[];
+    if(o.total===undefined||o.total===null){
+      var g=0;o.items.forEach(function(i){g+=(i.qty||0)*(i.price||0);});
+      o.total=g+(parseFloat(o.ship1)||0);
+    }
+    o.items.forEach(function(i){i.qty=Math.round(i.qty)||0;});
+  });
+  d.sales=d.sales.filter(function(x){
+    var o=null,i;for(i=0;i<d.orders.length;i++)if(d.orders[i].id===x.oid)o=d.orders[i];
+    if(!o)return false;
+    for(i=0;i<o.items.length;i++)if(o.items[i].id===x.iid)return true;
+    return false;});
+  return d;
+}
 function load(){
   try{var r=localStorage.getItem(KEY);
     if(!r){var legacy=localStorage.getItem("soldicamera.v1");
       if(legacy){localStorage.setItem(KEY,legacy);r=legacy;}}
     if(!r)return JSON.parse(JSON.stringify(blank));
-    var d=JSON.parse(r);for(var k in blank)if(!(k in d))d[k]=Array.isArray(blank[k])?[]:blank[k];
-    ["ledger","orders","sales","promos","play","debts"].forEach(function(k){if(!Array.isArray(d[k]))d[k]=[];});
-    d.orders.forEach(function(o){
-      if(!Array.isArray(o.items))o.items=[];
-      if(o.total===undefined||o.total===null){
-        var g=0;o.items.forEach(function(i){g+=(i.qty||0)*(i.price||0);});
-        o.total=g+(parseFloat(o.ship1)||0);
-      }
-      o.items.forEach(function(i){i.qty=Math.round(i.qty)||0;});
-    });
-    d.sales=d.sales.filter(function(x){
-      var o=null,i;for(i=0;i<d.orders.length;i++)if(d.orders[i].id===x.oid)o=d.orders[i];
-      if(!o)return false;
-      for(i=0;i<o.items.length;i++)if(o.items[i].id===x.iid)return true;
-      return false;});
-    return d;}
+    return normalize(JSON.parse(r));}
   catch(e){return JSON.parse(JSON.stringify(blank));}
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast("Spazio esaurito: fai un backup");}}
@@ -285,13 +293,22 @@ function num(x){
   else s=s.replace(",",".");
   var n=parseFloat(s);return isNaN(n)?0:n;
 }
+/* toglie la polvere che lascia la virgola mobile (un portafoglio svuotato di preciso
+   finiva a -0,00 € in rosso). Aggiusta SOLO quando il numero e' gia' un centesimo
+   tondo sporcato dai decimali: i centesimi veri non li tocca. */
+function c2(n){var r=Math.round(n*100)/100;return Math.abs(n-r)<1e-9?r:n;}
 function eur(n,sign){
+  n=c2(n);
   var s=(Math.abs(n)).toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2});
   var p=n<0?"-":(sign&&n>0?"+":"");
   return p+s+" €";
 }
-function eur0(n){return Math.round(n).toLocaleString("it-IT")+" €";}
-function today(){var d=new Date();return d.toISOString().slice(0,10);}
+function eur0(n){var r=Math.round(c2(n));if(r===0)r=0;   /* mai "-0 €" */
+  return r.toLocaleString("it-IT")+" €";}
+/* la data di OGGI come la vede lui sull'orologio: toISOString() dà l'ora di Londra,
+   e fino alle 2 di notte avrebbe scritto la data di ieri */
+function today(){var d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function dmy(s){if(!s)return"";var p=s.split("-");return p[2]+"/"+p[1];}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){
   return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
@@ -306,7 +323,7 @@ function post(wallet,amount,label,kind,ref,date,cat){
   S.ledger.push({id:uid(),w:wallet,a:amount,l:label,k:kind,ref:ref||null,d:date||today(),c:cat||""});
 }
 function unpost(ref){S.ledger=S.ledger.filter(function(e){return e.ref!==ref;});}
-function balance(w){return S.ledger.reduce(function(t,e){return e.w===w?t+e.a:t;},0);}
+function balance(w){return c2(S.ledger.reduce(function(t,e){return e.w===w?t+e.a:t;},0));}
 
 /* ============================ BUSINESS ============================ */
 function oPieces(o){return o.items.reduce(function(t,i){return t+i.qty;},0);}
@@ -356,15 +373,15 @@ function saleSocio(s){                     /* quanto di quella vendita spetta al
   return s.price*(1-oShare(o));
 }
 function socioDovuto(){                    /* da dare ai soci, sulle vendite gia fatte */
-  return S.sales.reduce(function(t,x){return t+saleSocio(x);},0);
+  return c2(S.sales.reduce(function(t,x){return t+saleSocio(x);},0));
 }
 function oMyCost(o){return oCost(o)*oShare(o);}
 function oMyRevenue(id){var o=find(S.orders,id);return oRevenue(id)*(o?oShare(o):1);}
 function find(arr,id){for(var i=0;i<arr.length;i++)if(arr[i].id===id)return arr[i];return null;}
 
 /* ============================ TOTALI ============================ */
-function debtLeft(){return S.debts.reduce(function(t,d){return t+num(d.left);},0);}
-function playBalance(){return S.play.reduce(function(t,p){return t+(p.kind==="prelievo"?p.amount:-p.amount);},0);}
+function debtLeft(){return c2(S.debts.reduce(function(t,d){return t+num(d.left);},0));}
+function playBalance(){return c2(S.play.reduce(function(t,p){return t+(p.kind==="prelievo"?p.amount:-p.amount);},0));}
 function playMonth(){return S.play.reduce(function(t,p){
   return monthOf(p.date)===curMonth()?t+(p.kind==="prelievo"?p.amount:-p.amount):t;},0);}
 function promoWaiting(){return S.promos.reduce(function(t,p){
@@ -393,15 +410,15 @@ function catBreakdown(m){
   });
   return Object.keys(map).map(function(k){return {k:k,v:map[k]};}).sort(function(a,b){return b.v-a.v;});
 }
-function liquid(){return balance("contanti")+balance("conto");}   /* quello che puoi spendere adesso */
+function liquid(){return c2(balance("contanti")+balance("conto"));}   /* quello che puoi spendere adesso */
 function savings(){return balance("risparmi");}                   /* messi da parte */
 /* quanti soldi avevi in tutto (contanti + conto + risparmi) fino a quella data:
    cosi spostare soldi tra i portafogli non risulta ne un guadagno ne una perdita */
 function balanceAt(dateStr){
-  return S.ledger.reduce(function(t,e){
-    return (e.d<=dateStr&&(e.w==="contanti"||e.w==="conto"||e.w==="risparmi"))?t+e.a:t;},0);
+  return c2(S.ledger.reduce(function(t,e){
+    return (e.d<=dateStr&&(e.w==="contanti"||e.w==="conto"||e.w==="risparmi"))?t+e.a:t;},0));
 }
-function wealth(){return liquid()+savings();}
+function wealth(){return c2(liquid()+savings());}
 function firstMonth(){
   var m=null;
   S.ledger.forEach(function(e){var k=monthOf(e.d);if(k&&(!m||k<m))m=k;});
@@ -1437,9 +1454,13 @@ function sheetPromo(){
    '<button class="btn" id="p_go">Aggiungi</button>'+
    '<button class="btn ghost" id="p_go2">Aggiungi e continua</button></div>');
   segify("p_s");
+  /* il valore lo calcolo io dai token, ma appena lo scrive lui non glielo tocco piu':
+     con la doppia quota il valore giusto e' il doppio, non 30 */
+  var pvAuto=true;
+  document.getElementById("p_v").oninput=function(){pvAuto=false;};
   document.getElementById("p_k").oninput=function(){
     var k=num(this.value);
-    if(k>0){document.getElementById("p_v").value=(k*TOKEN_EUR).toFixed(2).replace(".",",");}
+    if(k>0&&pvAuto){document.getElementById("p_v").value=(k*TOKEN_EUR).toFixed(2).replace(".",",");}
     document.getElementById("p_calc").textContent=k>0?
       (k.toLocaleString("it-IT")+" token valgono "+eur(k*TOKEN_EUR)):
       "7600 token = 30 €. Scrivi i token e il valore si compila da solo.";
@@ -1491,9 +1512,12 @@ function sheetPromoDetail(id){
     document.getElementById("d_calc").textContent=k>0?
       (k.toLocaleString("it-IT")+" token valgono "+eur(k*TOKEN_EUR)):"7600 token = 30 €.";
   }
+  /* qui un valore c'e' gia': lo ricalcolo dai token solo se il campo e' vuoto */
+  var dvAuto=!num(v("d_v"));
+  document.getElementById("d_v").oninput=function(){dvAuto=false;};
   dk.oninput=function(){
     var k=num(this.value);
-    if(k>0)document.getElementById("d_v").value=(k*TOKEN_EUR).toFixed(2).replace(".",",");
+    if(k>0&&dvAuto)document.getElementById("d_v").value=(k*TOKEN_EUR).toFixed(2).replace(".",",");
     dcalc();
   };
   dcalc();
@@ -1572,6 +1596,8 @@ function sheetPay(id){
    '<button class="btn" id="r_go">Registra pagamento</button></div>');
   bind("r_go",function(){
     var a=num(v("r_a"));if(a<=0)return fail("Metti l'importo della rata");
+    /* una rata piu' grande del residuo sballerebbe il debito se poi la annulli */
+    if(a>num(d.left)+0.005)return fail("Restano solo "+eur(num(d.left))+" da pagare");
     d.left=Math.max(0,num(d.left)-a);
     post(v("r_w"),-a,"Rata "+d.name,"rata","rata:"+d.id+":"+a,today());
     save();closeSheet();render();toast("Rata registrata");
@@ -1863,7 +1889,7 @@ document.addEventListener("click",function(e){
     try{d=JSON.parse(raw);}catch(err){return toast("Questo testo non e un backup valido");}
     if(!d||!Array.isArray(d.ledger))return toast("Questo testo non e un backup valido");
     ask("Ripristinare?","Tutti i dati di adesso vengono sostituiti da quelli del backup.","Ripristina",function(){
-      S=d;for(var k in blank)if(!(k in S))S[k]=Array.isArray(blank[k])?[]:blank[k];
+      S=normalize(d);
       save();go("home");toast("Dati ripristinati");
     });
     return;
