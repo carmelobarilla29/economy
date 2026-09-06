@@ -17,7 +17,7 @@ Vanilla JS, niente build, niente dipendenze, niente framework. Tutto in
   (migra dalla vecchia chiave `soldicamera.v1`)
 - **ledger** — un unico registro di movimenti; i saldi sono sempre calcolati
   sommando il registro, mai memorizzati
-- **viste** — funzioni `vHome`, `vMov`, `vBiz`, `vPromo`, `vPlay`, `vDebts`,
+- **viste** — funzioni `vHome`, `vMov`, `vBiz`, `vPlay`, `vDebts`, `vLoans`,
   `vStats`, `vBackup`, ognuna ritorna una stringa HTML; `render()` la inietta
 - **pannelli** — le funzioni `sheet*` aprono i moduli di inserimento
 
@@ -32,9 +32,10 @@ S = {
   orders: [{id, name, date, wallet, total, ship2, ship2paid, ship2date,
             wallet2, share, arrived, arrivedDate, items:[{id,name,qty}]}],
   sales:  [{id, oid, iid, qty, price, channel, wallet, date}],
-  promos: [{id, person, type, date, value, tokens, status, into}],
   play:   [{id, kind, amount, wallet, date, note}],
   debts:  [{id, name, total, left}],
+  loans:  [{id, kind, person, total, left, wallet, date, note}],
+  promos: [],   // sezione tolta, i dati vecchi restano qui dentro
   bk, pin, v
 }
 ```
@@ -45,7 +46,8 @@ soldi" (usato per il gioco fatto prima di avere l'app e per gli ordini già
 pagati altrove).
 
 **`ref`** collega una riga del registro alla sua origine: `order:<id>`,
-`order2:<id>`, `sale:<id>`, `play:<id>`, `giro:<uid>`, `rata:<debtId>:<importo>`.
+`order2:<id>`, `sale:<id>`, `play:<id>`, `giro:<uid>`, `rata:<debtId>:<importo>`,
+`loan:<id>`, `rid:<loanId>:<importo>`.
 Le righe con `ref` non si modificano dai Movimenti: si cambia l'oggetto
 d'origine e le righe vengono riscritte. `unpost(ref)` cancella tutte le righe
 di un ref.
@@ -53,8 +55,9 @@ di un ref.
 ## Le decisioni, e perché
 
 **Il numero grande in home sono solo contanti + conto.** Non i risparmi, non il
-magazzino, non i buoni promo. È "quanto posso spendere adesso". Sotto compare
-una riga con risparmi e debiti e il totale complessivo.
+magazzino, non i soldi che deve ancora riavere. È "quanto posso spendere
+adesso". Sotto compare una riga con risparmi, soldi da riavere e debiti, e il
+totale complessivo, che invece li conta tutti.
 
 **Il magazzino non è patrimonio.** I soldi di un ordine sono usciti e basta,
 contano come spesa. In Business quel valore si chiama "Da rientrare": non è
@@ -92,10 +95,31 @@ la vende lui, il socio ha una quota sui guadagni. Quindi:
 - `saleSocio()` calcola quanto di ogni incasso spetta al socio, e Business
   mostra "Da dare ai soci". Quando lo paga, registra una spesa normale.
 
-**Promo**: 7600 isytoken = 30 € (`TOKEN_EUR`). Stati: invitato → registrato →
-accreditato → convertito → speso. Accreditato e convertito contano come "buoni
-da usare"; escono dal totale solo con "speso" — un buono Amazon convertito ce
-l'ha ancora in mano. Il campo "convertito in" è testo libero.
+**Soldi da riavere** (`S.loans`, `vLoans`, `sheetLoan`, `sheetRepay`): soldi
+suoi che devono tornargli. Due tipi nello stesso elenco, distinti da `kind`:
+
+- `kind:"prestito"` — li ha dati a una persona. Escono dal portafoglio (riga
+  `prestito`, ref `loan:<id>`) ma **non sono una spesa**: `monthInOut` e
+  `catBreakdown` li escludono come i giri.
+- `kind:"arrivo"` — soldi suoi fermi altrove (un rimborso, un conto di gioco).
+  Non sono mai stati nei portafogli, quindi **non scrivono niente nel ledger**:
+  esiste solo la voce in `S.loans`.
+
+Quando rientrano, in tutti e due i casi, una riga `rimborso` con ref
+`rid:<loanId>:<importo>` porta i soldi nel portafoglio scelto. **Non è
+un'entrata**: quei soldi erano già suoi, contati in `loanLeft()`.
+
+`loanLeft()` entra nel totale complessivo in home ma **non nel numero grande**:
+i soldi che devono ancora arrivare non si possono spendere adesso.
+
+Non si può segnare un rientro più grande di quello che resta, come per le rate.
+Eliminando una voce spariscono anche i rientri collegati. Le voci registrate
+prima che esistesse il tipo `arrivo` non hanno `kind` e valgono come prestiti.
+
+**La sezione Promo non c'è più.** È stata tolta perché Carmelo ha un'app a parte
+per quelle. `S.promos` è rimasto nei dati e nel backup, invisibile: i suoi dati
+vecchi non sono stati cancellati e la sezione si potrebbe rimettere. "Promo"
+resta fra le categorie delle entrate.
 
 **Le date vuote** finiscono in un gruppo "Senza data", non fanno crashare
 `labMonth`. **`num()`** interpreta il punto come separatore delle migliaia
@@ -110,7 +134,8 @@ validazione, altrimenti il secondo tocco veniva ignorato.
 
 - **Non aggiungere il prezzo per pezzo negli ordini.** Ci abbiamo rinunciato
   apposta.
-- **Non far entrare magazzino, buoni promo o gioco nel numero grande.**
+- **Non far entrare magazzino, gioco o soldi da riavere nel numero grande.**
+  Nel totale complessivo sotto, invece, i soldi da riavere ci vanno.
 - **Non trasformare i giri in entrate/uscite.**
 - **Non introdurre un blocco che sovrascrive `S` all'avvio.** Ne è esistito uno
   (caricava i dati iniziali) ed è stato rimosso apposta: era una mina, bastava
@@ -133,6 +158,23 @@ Nel repo non c'è una suite di test. Se ne aggiungi una, Playwright su Chromium
 funziona bene: gli elementi hanno attributi `data-*` stabili (`data-go`,
 `data-sheet`, `data-led`, `data-order`, `data-adj`…) pensati proprio per essere
 agganciati.
+
+## L'app gemella di Alessandro
+
+`~/Documents/economy-alessandro` → https://github.com/carmelobarilla29/economy-alessandro,
+pubblicata su https://carmelobarilla29.github.io/economy-alessandro/. Stesso
+codice, progetto separato, gestito sempre da Carmelo: una modifica a un'app non
+tocca l'altra.
+
+Le due app stanno sullo stesso sito e il browser lega i dati al sito, non alla
+cartella: a tenerle separate è solo la chiave in cima allo script
+(`cb29economy.v1` qui, `aleeconomy.v1` di là). **Non vanno mai rese uguali né
+cambiate**: cambiarne una cancella i dati di chi la usa.
+
+Differenze: di là c'è ancora la sezione Promo e non c'è il recupero da
+`soldicamera.v1`. Il resto, "Soldi da riavere" compreso, è identico.
+**Non copiare `index.html` da un progetto all'altro**: ti porteresti dietro
+chiave, nome e saluto sbagliati. Le modifiche si riportano a mano.
 
 ## Aggiornare l'app
 

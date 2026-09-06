@@ -380,11 +380,19 @@ function find(arr,id){for(var i=0;i<arr.length;i++)if(arr[i].id===id)return arr[
 
 /* ============================ TOTALI ============================ */
 function debtLeft(){return c2(S.debts.reduce(function(t,d){return t+num(d.left);},0));}
-/* soldi prestati che devono ancora tornare indietro */
+/* soldi che devono ancora tornargli: prestati a qualcuno, oppure fermi
+   da qualche altra parte in attesa di arrivare */
 function loanLeft(){return c2(S.loans.reduce(function(t,l){return t+num(l.left);},0));}
+function isArrivo(l){return l.kind==="arrivo";}
 function playBalance(){return c2(S.play.reduce(function(t,p){return t+(p.kind==="prelievo"?p.amount:-p.amount);},0));}
 function playMonth(){return S.play.reduce(function(t,p){
   return monthOf(p.date)===curMonth()?t+(p.kind==="prelievo"?p.amount:-p.amount):t;},0);}
+function promoWaiting(){return S.promos.reduce(function(t,p){
+  return (p.status==="accreditato"||p.status==="convertito")?t+num(p.value):t;},0);}
+function promoTokens(){return S.promos.reduce(function(t,p){
+  return p.status==="accreditato"?t+(num(p.tokens)||0):t;},0);}
+function promoTotal(){return S.promos.reduce(function(t,p){
+  return (p.status==="invitato"||p.status==="registrato")?t:t+num(p.value);},0);}
 function monthInOut(m){
   var i=0,u=0,adj=0;
   S.ledger.forEach(function(e){
@@ -614,7 +622,7 @@ function vHome(){
   if(sav>0||deb>0||pre>0){
     var pezzi=[];
     if(sav>0)pezzi.push('<b style="color:var(--tx)">'+eur(sav)+'</b> messi da parte');
-    if(pre>0)pezzi.push('<b class="acc">'+eur(pre)+'</b> che ti devono');
+    if(pre>0)pezzi.push('<b class="acc">'+eur(pre)+'</b> da riavere');
     if(deb>0)pezzi.push('<b class="neg">'+eur(deb)+'</b> di debiti');
     h+='<div class="extra" data-go="'+(sav>0?"mov":pre>0?"loans":"debts")+'">'+
       ((sav>0||pre>0)?'Pi&ugrave; ':'')+pezzi.join(' &middot; ')+
@@ -645,7 +653,7 @@ function vHome(){
      '<div style="display:flex;flex-direction:column;gap:9px">'+
      watchRow("biz","var(--warn)","Da rientrare col business",eur(stockValue()),"")+
      watchRow("play","var(--neg)","Gioco, da sempre",eur(playBalance(),true),playBalance()<0?"neg":"")+
-     (loanLeft()>0?watchRow("loans","var(--acc)","Soldi che ti devono",eur(loanLeft()),""):'')+
+     (loanLeft()>0?watchRow("loans","var(--acc)","Soldi da riavere",eur(loanLeft()),""):'')+
      (deb>0?watchRow("debts","#C6CBD5","Debiti da pagare",eur(deb),"neg"):'')+
      '</div></div>';
 
@@ -929,32 +937,39 @@ function vDebts(){
   return h;
 }
 
-/* ---------- PRESTITI ---------- */
-/* soldi che ha prestato: sono usciti dal portafoglio ma restano suoi,
-   quindi non contano come spesa. Tornano dentro quando glieli restituiscono. */
+/* ---------- SOLDI DA RIAVERE ---------- */
+/* due casi diversi che rispondono alla stessa domanda "quanto devo ancora riavere?":
+   - prestito: soldi dati a una persona, escono dal portafoglio ma restano suoi
+   - in arrivo: soldi suoi fermi da un'altra parte (conto Snai, un rimborso...)
+     che non sono mai stati nei portafogli, quindi non esce niente */
 function vLoans(){
-  var h=header("Prestiti",addBtn("loan","Aggiungi"));
-  h+='<div class="card" style="padding:20px"><div style="font-size:13px;color:var(--tx-2)">Soldi che ti devono</div>'+
+  var h=header("Soldi da riavere",addBtn("loan","Aggiungi"));
+  h+='<div class="card" style="background:linear-gradient(160deg,#1B1F2B 0%, var(--surf) 100%);padding:20px">'+
+     '<div style="font-size:13px;color:var(--tx-2)">Devi riavere in tutto</div>'+
      '<div class="'+(loanLeft()?"acc":"")+'" style="font-size:36px;font-weight:600;letter-spacing:-.03em;margin-top:5px;line-height:1.05">'+
        eur(loanLeft())+'</div></div>';
-  h+='<div class="sec"><div class="note">Quando presti dei soldi escono dal portafoglio ma non sono una spesa: restano tuoi. Quando te li restituiscono rientrano da soli.</div></div>';
+  h+='<div class="sec"><div class="note">Sono soldi gi&agrave; tuoi, solo non in tasca: contano nel totale in home ma non nei soldi che puoi spendere adesso. Quando arrivano rientrano da soli.</div></div>';
   h+='<div class="sec">';
-  if(!S.loans.length)h+='<div class="card"><div class="empty">Non hai prestato niente a nessuno.</div></div>';
+  if(!S.loans.length)h+='<div class="card"><div class="empty">Niente da riavere.<br>Aggiungi un prestito o dei soldi in arrivo.</div></div>';
   S.loans.slice().sort(byDateDesc).forEach(function(l){
-    var tot=num(l.total),left=num(l.left),reso=tot-left;
+    var tot=num(l.total),left=num(l.left),reso=tot-left,arr=isArrivo(l);
     var pct=tot>0?(reso/tot)*100:0;
     h+='<div class="card" style="margin-bottom:9px">'+
-      '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">'+
-      '<div style="font-size:15px;font-weight:600">'+esc(l.person)+'</div>'+
-      '<div class="row-a '+(left>0?"acc":"pos")+'">'+eur(left)+'</div></div>'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">'+
+      '<div><div style="font-size:15px;font-weight:600">'+esc(l.person)+'</div>'+
       '<div style="font-size:12.5px;color:var(--tx-2);margin-top:4px">'+
-        (left>0?'ti deve ancora':'ti ha restituito tutto')+' &middot; prestati il '+dmy(l.date)+
-        (l.wallet&&l.wallet!=="nessuno"?' dai '+esc(walletName(l.wallet)).toLowerCase():'')+
-        (l.note?' &middot; '+esc(l.note):'')+'</div>'+
+        (left>0?(arr?'devono ancora arrivare':'ti deve ancora'):(arr?'arrivati tutti':'ti ha restituito tutto'))+
+        ' &middot; dal '+dmy(l.date)+
+        (!arr&&l.wallet&&l.wallet!=="nessuno"?' dai '+esc(walletName(l.wallet)).toLowerCase():'')+
+        (l.note?' &middot; '+esc(l.note):'')+'</div></div>'+
+      '<div class="row-r"><div class="row-a '+(left>0?"acc":"pos")+'">'+eur(left)+'</div>'+
+      '<span class="tag '+(arr?"wait":"acc")+'">'+(arr?"in arrivo":"prestito")+'</span></div></div>'+
       '<div class="bar"><i class="'+(left<=0?"done":"")+'" style="width:'+Math.max(0,Math.min(100,pct)).toFixed(0)+'%"></i></div>'+
-      '<div style="font-size:12.5px;color:var(--tx-2);margin-top:10px">Restituiti '+eur(reso)+' su '+eur(tot)+'</div>'+
+      '<div style="font-size:12.5px;color:var(--tx-2);margin-top:10px">'+
+        (arr?'Arrivati ':'Restituiti ')+eur(reso)+' su '+eur(tot)+'</div>'+
       '<div style="display:flex;gap:9px;margin-top:14px">'+
-       (left>0?'<button class="btn ghost" data-repay="'+l.id+'" style="padding:12px">Mi ha restituito</button>':'')+
+       (left>0?'<button class="btn ghost" data-repay="'+l.id+'" style="padding:12px">'+
+         (arr?'Mi sono arrivati':'Mi ha restituito')+'</button>':'')+
        '<button class="btn danger" data-delloan="'+l.id+'" style="padding:12px;width:auto;flex:none">Elimina</button>'+
       '</div></div>';
   });
@@ -1048,7 +1063,7 @@ function vBackup(){
      '<div class="kv"><span>Ordini</span><b>'+S.orders.length+'</b></div>'+
      '<div class="kv"><span>Vendite</span><b>'+S.sales.length+'</b></div>'+
      '<div class="kv"><span>Gioco</span><b>'+S.play.length+'</b></div>'+
-     '<div class="kv"><span>Prestiti</span><b>'+S.loans.length+'</b></div></div></div>';
+     '<div class="kv"><span>Da riavere</span><b>'+S.loans.length+'</b></div></div></div>';
   h+='<div class="sec"><button class="btn danger" id="wipe">Cancella tutto e ricomincia</button></div>';
   return h;
 }
@@ -1090,7 +1105,7 @@ function sheetAdd(){
    ["order","Ordine fornitore","Nuovo stock dalla Cina","#8B9BF7"],
    ["play","Gioco","Deposito o prelievo","#C77DFF","G"],
    ["debt","Debito o rata","Klarna e simili","#9AA3B2"],
-   ["loan","Prestito","Hai prestato soldi a qualcuno","#8B9BF7"]
+   ["loan","Soldi da riavere","Prestati a qualcuno o in arrivo","#8B9BF7"]
   ];
   openSheet('<h3>Cosa registri?</h3><p class="hint">Scegli e in due tocchi è fatto.</p>'+
    acts.map(function(a){
@@ -1503,43 +1518,65 @@ function sheetPay(id){
   });
 }
 
-/* ---- prestiti ---- */
+/* ---- soldi da riavere ---- */
 function sheetLoan(){
-  openSheet('<h3>Nuovo prestito</h3><p class="hint">Soldi che hai dato a qualcuno e che devi riavere.</p>'+
-   '<div class="f"><div><label class="fl">A chi</label><input class="fi" id="l_n" placeholder="es. Pap&agrave;"></div>'+
+  openSheet('<h3>Soldi da riavere</h3><p class="hint">Soldi tuoi che devono ancora tornarti.</p>'+
+   '<div class="f">'+
+   '<div><label class="fl">Di che si tratta</label><div class="seg" id="l_k">'+
+    '<button class="on" data-s="prestito">Prestati a qualcuno</button>'+
+    '<button data-s="arrivo">Devono arrivare</button></div></div>'+
+   '<div><label class="fl" id="l_lab">A chi li hai prestati</label>'+
+    '<input class="fi" id="l_n" placeholder="es. Pap&agrave;"></div>'+
    '<div><label class="fl">Quanto</label>'+
     '<input class="fi mono" id="l_a" inputmode="decimal" placeholder="0,00"></div>'+
-   '<div><label class="fl">Presi da</label>'+
-    walletSelN("l_w","risparmi","Nessuno &mdash; glieli avevo gi&agrave; dati")+'</div>'+
-   '<div><label class="fl">Quando</label>'+dateIn("l_d")+'</div>'+
+   '<div id="l_wbox"><label class="fl">Presi da</label>'+
+    walletSelN("l_w","conto","Nessuno &mdash; glieli avevo gi&agrave; dati")+'</div>'+
+   '<div><label class="fl">Da quando</label>'+dateIn("l_d")+'</div>'+
    '<div><label class="fl">Nota</label><input class="fi" id="l_note" placeholder="es. per la macchina"></div>'+
-   '<div class="note">I soldi escono dal portafoglio ma non risultano una spesa: sono ancora tuoi. Se glieli avevi gi&agrave; dati prima di usare l\'app scegli <b>Nessuno</b>.</div>'+
+   '<div class="note" id="l_note2"></div>'+
    '<p class="err" id="l_err" hidden></p>'+
-   '<button class="btn" id="l_go">Registra prestito</button></div>');
+   '<button class="btn" id="l_go">Aggiungi</button></div>');
+  segify("l_k");
+  function aggiorna(){
+    var arr=segVal("l_k")==="arrivo";
+    document.getElementById("l_lab").textContent=arr?"Da dove devono arrivare":"A chi li hai prestati";
+    document.getElementById("l_n").placeholder=arr?"es. Conto Snai":"es. Pap\u00e0";
+    document.getElementById("l_wbox").hidden=arr;
+    document.getElementById("l_note2").innerHTML=arr?
+      "Non esce niente dai tuoi portafogli: quei soldi non ci sono mai stati. Quando arrivano li scegli tu dove metterli.":
+      "I soldi escono dal portafoglio ma non risultano una spesa: sono ancora tuoi. Se glieli avevi gi\u00e0 dati prima di usare l'app scegli <b>Nessuno</b>.";
+  }
+  document.getElementById("l_k").addEventListener("click",aggiorna);
+  aggiorna();
   bind("l_go",function(){
-    var n=v("l_n").trim();if(!n)return showErr("l_err","Scrivi a chi hai prestato i soldi.");
+    var arr=segVal("l_k")==="arrivo";
+    var n=v("l_n").trim();
+    if(!n)return showErr("l_err",arr?"Scrivi da dove devono arrivare.":"Scrivi a chi hai prestato i soldi.");
     var a=num(v("l_a"));if(a<=0)return showErr("l_err","Metti un importo maggiore di zero.");
-    var l={id:uid(),person:n,total:a,left:a,wallet:v("l_w"),date:vd("l_d"),note:v("l_note").trim()};
+    var l={id:uid(),kind:arr?"arrivo":"prestito",person:n,total:a,left:a,
+      wallet:arr?"nessuno":v("l_w"),date:vd("l_d"),note:v("l_note").trim()};
     S.loans.push(l);
     if(l.wallet!=="nessuno")
       post(l.wallet,-a,"Prestito a "+n,"prestito","loan:"+l.id,l.date);
-    save();closeSheet();render();toast("Prestito registrato");
+    save();closeSheet();render();toast(arr?"Aggiunto ai soldi in arrivo":"Prestito registrato");
   });
 }
 function sheetRepay(id){
   var l=find(S.loans,id);if(!l)return;
-  openSheet('<h3>'+esc(l.person)+'</h3><p class="hint">Ti deve ancora '+eur(num(l.left))+'.</p>'+
-   '<div class="f"><div><label class="fl">Quanto ti ha restituito</label>'+
+  var arr=isArrivo(l);
+  openSheet('<h3>'+esc(l.person)+'</h3><p class="hint">'+
+   (arr?'Devono ancora arrivarti ':'Ti deve ancora ')+eur(num(l.left))+'.</p>'+
+   '<div class="f"><div><label class="fl">'+(arr?"Quanto ti \u00e8 arrivato":"Quanto ti ha restituito")+'</label>'+
    '<input class="fi mono" id="q_a" inputmode="decimal" value="'+String(num(l.left).toFixed(2)).replace(".",",")+'"></div>'+
    '<div><label class="fl">Dove li hai messi</label>'+walletSel("q_w","conto")+'</div>'+
    '<div><label class="fl">Quando</label>'+dateIn("q_d")+'</div>'+
-   '<button class="btn" id="q_go">Me li ha dati</button></div>');
+   '<button class="btn" id="q_go">'+(arr?"Mi sono arrivati":"Me li ha dati")+'</button></div>');
   bind("q_go",function(){
-    var a=num(v("q_a"));if(a<=0)return fail("Metti l\'importo che ti ha restituito");
-    /* piu' del dovuto sballerebbe il prestito se poi lo annulli */
-    if(a>num(l.left)+0.005)return fail("Ti deve solo "+eur(num(l.left)));
+    var a=num(v("q_a"));if(a<=0)return fail("Metti l\'importo");
+    /* piu' del dovuto sballerebbe il conto se poi lo annulli */
+    if(a>num(l.left)+0.005)return fail((arr?"Devono arrivarti solo ":"Ti deve solo ")+eur(num(l.left)));
     l.left=Math.max(0,num(l.left)-a);
-    post(v("q_w"),a,"Restituiti da "+l.person,"rimborso","rid:"+l.id+":"+a,vd("q_d"));
+    post(v("q_w"),a,(arr?"Arrivati da ":"Restituiti da ")+l.person,"rimborso","rid:"+l.id+":"+a,vd("q_d"));
     save();closeSheet();render();toast("Soldi rientrati");
   });
 }
@@ -1590,12 +1627,12 @@ function sheetLedger(id){
     return;
   }
   if(e.k==="prestito"){
-    openSheet(testa+'<div class="note">Sono soldi che hai prestato: non sono una spesa, te li devono ancora. Si gestisce dalla sezione <b>Prestiti</b>, dove segni quando te li restituiscono.</div>'+
-      '<div style="margin-top:14px"><button class="btn ghost" data-go="loans">Vai ai Prestiti</button></div>');
+    openSheet(testa+'<div class="note">Sono soldi che hai prestato: non sono una spesa, li devi ancora riavere. Si gestisce da <b>Soldi da riavere</b>, dove segni quando ti tornano.</div>'+
+      '<div style="margin-top:14px"><button class="btn ghost" data-go="loans">Vai ai soldi da riavere</button></div>');
     return;
   }
   if(e.k==="rimborso"){
-    openSheet(testa+'<div class="note">Sono soldi che ti hanno restituito. Se elimini questa riga, l\'importo torna fra quelli che ti devono.</div>'+
+    openSheet(testa+'<div class="note">Sono soldi che ti sono tornati. Se elimini questa riga, l\'importo torna fra quelli che devi riavere.</div>'+
       '<div style="margin-top:14px"><button class="btn danger" data-delrimborso="'+e.id+'">Elimina</button></div>');
     return;
   }
@@ -1809,7 +1846,7 @@ document.addEventListener("click",function(e){
     var qid=drim.getAttribute("data-delrimborso"),qe=null,qi;
     for(qi=0;qi<S.ledger.length;qi++)if(S.ledger[qi].id===qid)qe=S.ledger[qi];
     if(!qe)return;
-    ask("Eliminare?","L'importo torna fra quelli che ti devono e i soldi riescono dal portafoglio.","Elimina",function(){
+    ask("Eliminare?","L'importo torna fra quelli che devi riavere e i soldi riescono dal portafoglio.","Elimina",function(){
       var pz=String(qe.ref||"").split(":"),lo=find(S.loans,pz[1]);
       if(lo)lo.left=num(lo.left)+num(pz[2]);
       S.ledger=S.ledger.filter(function(x){return x.id!==qid;});
@@ -1821,13 +1858,13 @@ document.addEventListener("click",function(e){
   if(dlo){
     var lid=dlo.getAttribute("data-delloan"),lo2=find(S.loans,lid);
     var nres=S.ledger.filter(function(x){return String(x.ref||"").indexOf("rid:"+lid+":")===0;}).length;
-    ask("Eliminare il prestito?",
-        "Spariscono l'uscita" + (nres?" e le "+nres+" restituzioni gia segnate":"") + ": i soldi tornano come se non avessi mai prestato niente.",
+    ask("Eliminare?",
+        "Sparisce" + (nres?" insieme ai "+nres+" rientri gia segnati":"") + ": i soldi tornano come se non avessi mai segnato niente.",
         "Elimina",function(){
       S.ledger=S.ledger.filter(function(x){return String(x.ref||"").indexOf("rid:"+lid+":")!==0;});
       unpost("loan:"+lid);
       S.loans=S.loans.filter(function(x){return x.id!==lid;});
-      save();closeSheet();render();toast("Prestito eliminato");
+      save();closeSheet();render();toast("Eliminato");
     });
     return;
   }
@@ -1863,7 +1900,7 @@ document.addEventListener("click",function(e){
     return;
   }
   if(t.id==="wipe"){
-    ask("Cancellare tutto?","Sparisce ogni movimento, ordine, prestito e debito. Non si torna indietro.","Cancella tutto",function(){
+    ask("Cancellare tutto?","Sparisce ogni movimento, ordine, debito e soldi da riavere. Non si torna indietro.","Cancella tutto",function(){
       S=JSON.parse(JSON.stringify(blank));save();go("home");toast("Tutto cancellato");
     });
     return;
