@@ -609,12 +609,16 @@ function vHome(){
        (delta>=0?"var(--pos-soft)":"var(--neg-soft)")+
        ';color:'+(delta>=0?"var(--pos)":"var(--neg)")+'">'+
        ICO(delta>=0?I.up:I.down,"currentColor",13)+eur(delta,true)+' questo mese</button>';
-  if(sav>0||deb>0){
-    h+='<div class="extra" data-go="'+(sav>0?"mov":"debts")+'">'+
-      (sav>0?'Pi&ugrave; <b style="color:var(--tx)">'+eur(sav)+'</b> messi da parte':'')+
-      (sav>0&&deb>0?' &middot; ':'')+
-      (deb>0?'<b class="neg">'+eur(deb)+'</b> di debiti':'')+
-      ' &middot; in tutto <b style="color:var(--tx)">'+eur(liq+sav-deb)+'</b></div>';
+  /* il totale complessivo: i soldi prestati contano, sono ancora suoi */
+  var pre=loanLeft();
+  if(sav>0||deb>0||pre>0){
+    var pezzi=[];
+    if(sav>0)pezzi.push('<b style="color:var(--tx)">'+eur(sav)+'</b> messi da parte');
+    if(pre>0)pezzi.push('<b class="acc">'+eur(pre)+'</b> che ti devono');
+    if(deb>0)pezzi.push('<b class="neg">'+eur(deb)+'</b> di debiti');
+    h+='<div class="extra" data-go="'+(sav>0?"mov":pre>0?"loans":"debts")+'">'+
+      ((sav>0||pre>0)?'Pi&ugrave; ':'')+pezzi.join(' &middot; ')+
+      ' &middot; in tutto <b style="color:var(--tx)">'+eur(liq+sav-deb+pre)+'</b></div>';
   }
   h+='</div>';
 
