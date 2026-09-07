@@ -121,6 +121,15 @@ per quelle. `S.promos` è rimasto nei dati e nel backup, invisibile: i suoi dati
 vecchi non sono stati cancellati e la sezione si potrebbe rimettere. "Promo"
 resta fra le categorie delle entrate.
 
+**Le correzioni di saldo non sono soldi che si muovono.** Spostano il saldo (e
+quindi i grafici, che sono saldi), ma restano fuori da ogni numero del tipo
+"questo mese hai guadagnato X": la pillolina in home, l'intestazione del mese
+nei Movimenti, "Differenza del mese" e "Dove vanno i soldi". Quelli usano
+`monthReal()`, cioè entrate + uscite senza giri e senza rettifiche. La riga
+"Correzioni di saldo" resta visibile a parte nel riepilogo del mese, così non
+si nasconde niente. Serviva: alla prima installazione uno mette tutti i suoi
+soldi con "Correggi saldo" e la home gli diceva "+650 € questo mese".
+
 **Le date vuote** finiscono in un gruppo "Senza data", non fanno crashare
 `labMonth`. **`num()`** interpreta il punto come separatore delle migliaia
 (`1.234` = 1234), perché l'utente scrive all'italiana.

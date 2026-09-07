@@ -404,12 +404,16 @@ function monthInOut(m){
   });
   return {in:i,out:u,adj:adj};
 }
+/* i soldi che si sono mossi DAVVERO in un mese. Le correzioni di saldo non sono
+   ne' un'entrata ne' una spesa: sono un "mi ero dimenticato di segnare qualcosa",
+   quindi spostano il saldo ma non contano qui. */
+function monthReal(m){var io=monthInOut(m);return c2(io.in+io.out);}
 function catBreakdown(m){
   var map={};
   S.ledger.forEach(function(e){
-    if(monthOf(e.d)!==m||e.a>=0||e.k==="giro"||e.k==="prestito")return;
+    if(monthOf(e.d)!==m||e.a>=0||e.k==="giro"||e.k==="prestito"||e.k==="rettifica")return;
     var k=e.c||({ordine:"Ordini fornitore",spedizione:"Ordini fornitore",rata:"Rate e debiti",
-      gioco:"Gioco",vendita:"Vendite",rettifica:"Correzioni"}[e.k]||"Altro");
+      gioco:"Gioco",vendita:"Vendite"}[e.k]||"Altro");
     map[k]=(map[k]||0)+Math.abs(e.a);
   });
   return Object.keys(map).map(function(k){return {k:k,v:map[k]};}).sort(function(a,b){return b.v-a.v;});
@@ -604,7 +608,7 @@ function addBtn(kind,label){
 /* ---------- HOME ---------- */
 function vHome(){
   var liq=liquid(),sav=savings(),deb=debtLeft();
-  var prev=balanceAt(lastDay(addMonth(curMonth(),-1))),delta=wealth()-prev;
+  var delta=monthReal(curMonth());
 
   var h='<div class="hdr"><div style="display:flex;align-items:center;gap:11px">'+
     '<div class="avatar">C</div><div><div class="hdr-sub">Ciao Carmelo</div>'+
@@ -612,7 +616,7 @@ function vHome(){
 
   h+='<div class="hero"><div class="lab">Soldi che hai</div>'+
      '<div class="big '+(liq<0?"neg":"")+'">'+eur(liq)+'</div>';
-  if(S.ledger.length>1)
+  if(delta!==0)
     h+='<button class="chip-delta" data-go="stats" style="border:0;cursor:pointer;background:'+
        (delta>=0?"var(--pos-soft)":"var(--neg-soft)")+
        ';color:'+(delta>=0?"var(--pos)":"var(--neg)")+'">'+
@@ -787,7 +791,7 @@ function movGroups(){
   if(!keys.length)
     h+='<div class="sec"><div class="card"><div class="empty">Nessun movimento.<br>Tocca <b>Aggiungi</b> in home per iniziare.</div></div></div>';
   keys.forEach(function(m){
-    var io=monthInOut(m),tot=io.in+io.out+io.adj;
+    var io=monthInOut(m),tot=io.in+io.out;
     h+='<div class="sec"><div class="sec-h"><h2>'+labMonth(m)+'</h2>'+
        '<span class="'+(tot<0?"neg":"pos")+'" style="font-size:13px;font-weight:600">'+eur(tot,true)+'</span></div>'+
        '<div class="card" style="margin-bottom:9px">'+
@@ -991,18 +995,18 @@ function vStats(){
   var serie=monthlySeries(6);
   var h=header("Andamento",gearBtn());
 
-  var oggi=wealth(),prevEnd=balanceAt(lastDay(addMonth(curMonth(),-1))),delta=oggi-prevEnd;
+  var oggi=wealth(),delta=monthReal(curMonth());
   h+='<div class="card" style="padding:20px"><div style="font-size:13px;color:var(--tx-2)">'+
      (savings()?"Soldi in tutto, risparmi compresi":"Soldi che hai")+'</div>'+
      '<div style="font-size:34px;font-weight:600;letter-spacing:-.03em;margin-top:5px;line-height:1.05">'+eur(oggi)+'</div>'+
-     '<div class="'+(delta>=0?"pos":"neg")+'" style="font-size:13px;margin-top:6px">'+eur(delta,true)+' rispetto a fine '+
-       labMonth(addMonth(curMonth(),-1)).split(" ")[0].toLowerCase()+'</div>'+
+     '<div class="'+(delta>=0?"pos":"neg")+'" style="font-size:13px;margin-top:6px">'+eur(delta,true)+
+       ' entrati e usciti questo mese</div>'+
      '<div style="margin-top:16px">'+chart("c1",serie,132)+'</div>'+
      '<div style="font-size:12px;color:var(--tx-3);margin-top:4px">Saldo alla fine di ogni mese'+
        (savings()?", risparmi compresi":"")+'</div></div>';
 
   var dd=dailySeries(curMonth());
-  var dm=dd.length?dd[dd.length-1].v-balanceAt(lastDay(addMonth(curMonth(),-1))):0;
+  var dm=monthReal(curMonth());
   h+='<div class="sec"><div class="sec-h"><h2>Da inizio mese a oggi</h2>'+
      '<span class="'+(dm>=0?"pos":"neg")+'" style="font-size:13px;font-weight:600">'+eur(dm,true)+'</span></div>'+
      '<div class="card">'+chart("c2",dd,120)+
@@ -1010,7 +1014,6 @@ function vStats(){
 
   var io=monthInOut(STATM),pf=monthProfit(STATM),pl=monthPlay(STATM);
   var end=balanceAt(STATM===curMonth()?today():lastDay(STATM));
-  var startB=balanceAt(lastDay(addMonth(STATM,-1)));
   var first=firstMonth();
   h+='<div class="sec"><div class="mnav">'+
      '<button data-mshift="-1"'+(addMonth(STATM,-1)<first?" disabled":"")+'>&lsaquo;</button>'+
@@ -1021,8 +1024,8 @@ function vStats(){
       '<div class="kv"><span>Uscite</span><b class="neg">'+eur(io.out)+'</b></div>'+
       (io.adj?'<div class="kv"><span>Correzioni di saldo</span><b class="'+(io.adj<0?"neg":"pos")+'">'+
         eur(io.adj,true)+'</b></div>':'')+
-      '<div class="kv top"><span>Differenza del mese</span><b class="'+((end-startB)>=0?"pos":"neg")+'">'+
-        eur(end-startB,true)+'</b></div></div>'+
+      '<div class="kv top"><span>Differenza del mese</span><b class="'+((io.in+io.out)>=0?"pos":"neg")+'">'+
+        eur(io.in+io.out,true)+'</b></div></div>'+
      '<div class="card">'+
       '<div class="kv"><span>Profitto dalle vendite</span><b class="'+(pf>=0?"pos":"neg")+'">'+eur(pf,true)+'</b></div>'+
       '<div class="kv"><span>Gioco</span><b class="'+(pl<0?"neg":pl>0?"pos":"")+'">'+eur(pl,true)+'</b></div>'+
