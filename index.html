@@ -420,13 +420,16 @@ function catBreakdown(m){
 }
 function liquid(){return c2(balance("contanti")+balance("conto"));}   /* quello che puoi spendere adesso */
 function savings(){return balance("risparmi");}                   /* messi da parte */
-/* quanti soldi avevi in tutto (contanti + conto + risparmi) fino a quella data:
+/* soldi gia' incassati ma fermi su una piattaforma (Vinted): sono suoi, pero'
+   per spenderli deve prima trasferirseli, quindi stanno fuori dal numero grande */
+function daTrasferire(){return balance("vinted");}
+/* quanti soldi avevi in tutto, su tutti i portafogli, fino a quella data:
    cosi spostare soldi tra i portafogli non risulta ne un guadagno ne una perdita */
 function balanceAt(dateStr){
   return c2(S.ledger.reduce(function(t,e){
-    return (e.d<=dateStr&&(e.w==="contanti"||e.w==="conto"||e.w==="risparmi"))?t+e.a:t;},0));
+    return (e.d<=dateStr&&(e.w==="contanti"||e.w==="conto"||e.w==="vinted"||e.w==="risparmi"))?t+e.a:t;},0));
 }
-function wealth(){return c2(liquid()+savings());}
+function wealth(){return c2(liquid()+savings()+daTrasferire());}
 function firstMonth(){
   var m=null;
   S.ledger.forEach(function(e){var k=monthOf(e.d);if(k&&(!m||k<m))m=k;});
@@ -607,7 +610,7 @@ function addBtn(kind,label){
 
 /* ---------- HOME ---------- */
 function vHome(){
-  var liq=liquid(),sav=savings(),deb=debtLeft();
+  var liq=liquid(),sav=savings(),deb=debtLeft(),vin=daTrasferire();
   var delta=monthReal(curMonth());
 
   var h='<div class="hdr"><div style="display:flex;align-items:center;gap:11px">'+
@@ -623,14 +626,15 @@ function vHome(){
        ICO(delta>=0?I.up:I.down,"currentColor",13)+eur(delta,true)+' questo mese</button>';
   /* il totale complessivo: i soldi prestati contano, sono ancora suoi */
   var pre=loanLeft();
-  if(sav>0||deb>0||pre>0){
+  if(sav>0||deb>0||pre>0||vin>0){
     var pezzi=[];
     if(sav>0)pezzi.push('<b style="color:var(--tx)">'+eur(sav)+'</b> messi da parte');
+    if(vin>0)pezzi.push('<b class="warn">'+eur(vin)+'</b> su Vinted');
     if(pre>0)pezzi.push('<b class="acc">'+eur(pre)+'</b> da riavere');
     if(deb>0)pezzi.push('<b class="neg">'+eur(deb)+'</b> di debiti');
-    h+='<div class="extra" data-go="'+(sav>0?"mov":pre>0?"loans":"debts")+'">'+
-      ((sav>0||pre>0)?'Pi&ugrave; ':'')+pezzi.join(' &middot; ')+
-      ' &middot; in tutto <b style="color:var(--tx)">'+eur(liq+sav-deb+pre)+'</b></div>';
+    h+='<div class="extra" data-go="'+(sav>0||vin>0?"mov":pre>0?"loans":"debts")+'">'+
+      ((sav>0||vin>0||pre>0)?'Pi&ugrave; ':'')+pezzi.join(' &middot; ')+
+      ' &middot; in tutto <b style="color:var(--tx)">'+eur(liq+sav+vin-deb+pre)+'</b></div>';
   }
   h+='</div>';
 
@@ -643,6 +647,8 @@ function vHome(){
   h+='<div class="sec"><div class="card tight">'+
      walletRow("conto","Conto","digitale",I.card,"var(--acc)","var(--acc-soft)")+
      walletRow("contanti","Contanti","in camera",I.cash,"#C6CBD5","rgba(198,203,213,.10)")+
+     (vin!==0?
+       walletRow("vinted","Vinted","da trasferire",I.bag,"var(--warn)","var(--warn-soft)"):'')+
      (sav>0||balance("risparmi")!==0?
        walletRow("risparmi","Risparmi","da parte",I.piggy,"var(--pos)","var(--pos-soft)"):'')+
      '</div></div>';
@@ -719,14 +725,16 @@ function ledRow(e){
    '<div class="row-a '+(e.a<0?"":"pos")+'">'+eur(e.a,true)+'</div></button>';
 }
 function walletName(w){
-  return {contanti:"Contanti",conto:"Conto",risparmi:"Risparmi",nessuno:"storico"}[w]||w;
+  return {contanti:"Contanti",conto:"Conto",vinted:"Vinted",risparmi:"Risparmi",nessuno:"storico"}[w]||w;
 }
 
 /* ---------- MOVIMENTI ---------- */
 function vMov(){
   var h=header("Movimenti",gearBtn());
-  h+='<div class="sec" style="margin-top:4px"><div class="grid3">'+
-     movWallet("conto","Conto")+movWallet("contanti","Contanti")+movWallet("risparmi","Risparmi")+
+  var vin=daTrasferire();
+  h+='<div class="sec" style="margin-top:4px"><div class="'+(vin!==0?"grid2":"grid3")+'">'+
+     movWallet("conto","Conto")+movWallet("contanti","Contanti")+
+     (vin!==0?movWallet("vinted","Vinted"):'')+movWallet("risparmi","Risparmi")+
      '</div></div>';
   h+='<div class="sec"><div class="f2" style="grid-template-columns:1fr 132px">'+
      '<input class="fi" id="mq" placeholder="Cerca un movimento" value="'+esc(MQ)+'">'+
@@ -1083,14 +1091,14 @@ function closeSheet(){
 }
 function walletSelN(id,def,testo){
   return '<select class="fi" id="'+id+'">'+
-   ["contanti","conto","risparmi"].map(function(w){
+   ["contanti","conto","vinted","risparmi"].map(function(w){
      return '<option value="'+w+'"'+(def===w?" selected":"")+'>'+walletName(w)+'</option>';}).join("")+
    '<option value="nessuno"'+(def==="nessuno"?" selected":"")+'>'+
      (testo||"Nessuno — non toccare i soldi")+'</option></select>';
 }
 function walletSel(id,def){
   return '<select class="fi" id="'+id+'">'+
-   ["contanti","conto","risparmi"].map(function(w){
+   ["contanti","conto","vinted","risparmi"].map(function(w){
      return '<option value="'+w+'"'+(def===w?" selected":"")+'>'+walletName(w)+'</option>';}).join("")+
    '</select>';
 }
@@ -1103,7 +1111,7 @@ function sheetAdd(){
   var acts=[
    ["spesa","Spesa","Qualcosa che hai comprato","#F2705E"],
    ["entrata","Entrata","Soldi che ti sono arrivati","#46C98B"],
-   ["giro","Giro di soldi","Tra contanti, conto e risparmi","#8B93A1","⇄"],
+   ["giro","Giro di soldi","Tra i tuoi portafogli","#8B93A1","⇄"],
    ["sale","Vendita","Hai venduto un pezzo del magazzino","#8B9BF7"],
    ["order","Ordine fornitore","Nuovo stock dalla Cina","#8B9BF7"],
    ["play","Gioco","Deposito o prelievo","#C77DFF","G"],
@@ -1142,12 +1150,12 @@ function sheetFlow(kind){
 }
 function showErr(id,m){var e=document.getElementById(id);if(e){e.textContent=m;e.hidden=false;}BUSY=false;}
 
-/* ---- giro tra contanti e conto ---- */
+/* ---- giro fra i portafogli ---- */
 function sheetGiro(){
-  openSheet('<h3>Giro di soldi</h3><p class="hint">Sposti soldi tra contanti, conto e risparmi. Il totale non cambia, cambia solo dove stanno.</p>'+
+  openSheet('<h3>Giro di soldi</h3><p class="hint">Sposti soldi da un portafoglio all\'altro, per esempio da Vinted al conto. Il totale non cambia, cambia solo dove stanno.</p>'+
    '<div class="f"><div class="f2">'+
-    '<div><label class="fl">Da</label>'+walletSel("t_from","conto")+'</div>'+
-    '<div><label class="fl">A</label>'+walletSel("t_to","risparmi")+'</div></div>'+
+    '<div><label class="fl">Da</label>'+walletSel("t_from",daTrasferire()>0?"vinted":"conto")+'</div>'+
+    '<div><label class="fl">A</label>'+walletSel("t_to",daTrasferire()>0?"conto":"risparmi")+'</div></div>'+
    '<div><label class="fl">Importo</label>'+
     '<input class="fi mono" id="t_amt" inputmode="decimal" placeholder="0,00"></div>'+
    '<div><label class="fl">Data</label>'+dateIn("t_d")+'</div>'+
@@ -1415,7 +1423,7 @@ function sheetSale(pre){
      '<input class="fi mono" id="v_p" inputmode="decimal" placeholder="0,00"></div></div>'+
    '<div class="f2"><div><label class="fl">Dove</label><select class="fi" id="v_c">'+
      '<option>Vinted</option><option>Wallapop</option><option>Di persona</option><option>Altro</option></select></div>'+
-    '<div><label class="fl">Incassato su</label>'+walletSel("v_w","contanti")+'</div></div>'+
+    '<div><label class="fl">Incassato su</label>'+walletSel("v_w","vinted")+'</div></div>'+
    '<div><label class="fl">Data</label>'+dateIn("v_d")+'</div>'+
    '<div class="note" id="v_prev">Scegli l\'articolo e il prezzo.</div>'+
    '<p class="err" id="v_err" hidden></p>'+

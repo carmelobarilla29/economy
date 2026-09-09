@@ -40,10 +40,16 @@ S = {
 }
 ```
 
-**Portafogli**: `contanti`, `conto`, `risparmi`. In più il valore speciale
-`nessuno`, che significa "questo movimento è successo ma non tocca i miei
-soldi" (usato per il gioco fatto prima di avere l'app e per gli ordini già
+**Portafogli**: `contanti`, `conto`, `vinted`, `risparmi`. In più il valore
+speciale `nessuno`, che significa "questo movimento è successo ma non tocca i
+miei soldi" (usato per il gioco fatto prima di avere l'app e per gli ordini già
 pagati altrove).
+
+Se un giorno servisse un'altra piattaforma (Wallapop e simili) si aggiunge allo
+stesso modo: `walletName`, le due `walletSel*`, `balanceAt`, e le tessere in
+`vHome` e `vMov`. Sono cinque punti, non ce ne sono altri — ma **`balanceAt` è
+quello che si dimentica**, e se lo dimentichi i grafici ignorano quel
+portafoglio mentre i totali del mese no.
 
 **`ref`** collega una riga del registro alla sua origine: `order:<id>`,
 `order2:<id>`, `sale:<id>`, `play:<id>`, `giro:<uid>`, `rata:<debtId>:<importo>`,
@@ -55,9 +61,17 @@ di un ref.
 ## Le decisioni, e perché
 
 **Il numero grande in home sono solo contanti + conto.** Non i risparmi, non il
-magazzino, non i soldi che deve ancora riavere. È "quanto posso spendere
-adesso". Sotto compare una riga con risparmi, soldi da riavere e debiti, e il
-totale complessivo, che invece li conta tutti.
+magazzino, non il saldo Vinted, non i soldi che deve ancora riavere. È "quanto
+posso spendere adesso". Sotto compare una riga con risparmi, saldo Vinted,
+soldi da riavere e debiti, e il totale complessivo, che invece li conta tutti.
+
+**Il saldo Vinted è un portafoglio come gli altri** (`daTrasferire()`). Quando
+vende, i soldi entrano lì davvero: sono suoi e contano come entrata del mese,
+ma per spenderli deve prima trasferirseli sul conto, e quel trasferimento è un
+**giro** normale — quindi non risulta né entrata né spesa. Per questo sta fuori
+dal numero grande: prima di quel giro, quei soldi in mano non ce li ha. La
+tessera in home e la casella nei Movimenti compaiono solo se il saldo non è
+zero, così chi non vende non se la ritrova fra i piedi.
 
 **Il magazzino non è patrimonio.** I soldi di un ordine sono usciti e basta,
 contano come spesa. In Business quel valore si chiama "Da rientrare": non è
