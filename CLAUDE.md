@@ -74,8 +74,21 @@ tessera in home e la casella nei Movimenti compaiono solo se il saldo non è
 zero, così chi non vende non se la ritrova fra i piedi.
 
 **Il magazzino non è patrimonio.** I soldi di un ordine sono usciti e basta,
-contano come spesa. In Business quel valore si chiama "Da rientrare": non è
-roba che possiedi, è quanto devi ancora recuperare vendendo.
+contano come spesa. In Business `stockValue()` è in cima e si chiama **"Ancora
+da vendere"**: è quanto è costata la roba invenduta, la sua parte. Si chiamava
+"Da rientrare" e lo abbiamo cambiato perché sembrava un debito — Carmelo aveva
+già coperto le spese di un ordine e in cima leggeva ancora un numero da
+recuperare, mentre la scheda dell'ordine diceva "tutto recuperato". La prova
+che i conti tornano: soldi incassati in più rispetto a quanto speso, più il
+valore del magazzino, fa esattamente il profitto mostrato.
+
+**Le vendite si vedono tutte**, non solo le ultime, con il conteggio
+nell'intestazione. Toccando un articolo del magazzino, o un articolo dentro la
+scheda di un ordine, si apre `sheetVendite()`: ogni singola vendita di quel
+prodotto con data, canale, prezzo e guadagno, più il riepilogo in cima.
+Dal magazzino le vendite sono raggruppate per **nome**, quindi uniscono ordini
+diversi; dalla scheda dell'ordine sono del singolo articolo. Il pulsante per
+vendere compare solo quando l'articolo è uno solo e ha ancora pezzi.
 
 **I giri tra portafogli non sono né entrate né spese.** `monthInOut` e
 `catBreakdown` li escludono. `balanceAt` somma tutti e tre i portafogli proprio

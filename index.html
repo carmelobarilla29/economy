@@ -827,7 +827,7 @@ function vBiz(){
   var pieces=stockPieces(),sold=S.sales.reduce(function(t,x){return t+x.qty;},0);
 
   h+='<div class="card" style="background:linear-gradient(160deg,#1B1F2B 0%,var(--surf) 100%);padding:20px">'+
-     '<div style="font-size:13px;color:var(--tx-2)">Ti resta da rientrare</div>'+
+     '<div style="font-size:13px;color:var(--tx-2)">Ancora da vendere</div>'+
      '<div style="font-size:36px;font-weight:600;letter-spacing:-.03em;margin-top:5px;line-height:1.05">'+
        eur(stockValue())+'</div>'+
      '<div class="bar"><i style="width:'+(pieces+sold?Math.round(sold/(pieces+sold)*100):0)+'%"></i></div>'+
@@ -851,11 +851,12 @@ function vBiz(){
     h+='<div class="sec"><div class="sec-h"><h2>Magazzino</h2>'+
       '<span style="font-size:13px;color:var(--tx-2)">'+pieces+' pezzi &middot; '+eur(stockValue())+'</span></div>'+
       '<div class="card tight">'+mag.map(function(x){
-        return '<div class="row" style="cursor:default">'+
+        return '<button class="row" data-stockname="'+esc(x.n)+'">'+
           '<div class="row-i">'+x.q+'</div>'+
           '<div class="row-m"><b>'+esc(x.n)+'</b><span>'+eur(x.v/x.q)+' l\'uno</span></div>'+
-          '<div class="row-a">'+eur(x.v)+'</div></div>';
-      }).join("")+'</div></div>';
+          '<div class="row-a">'+eur(x.v)+'</div>'+ICO(I.chev,"#4A5160",15)+'</button>';
+      }).join("")+'</div>'+
+      '<p class="tile-s" style="margin-top:8px">Tocca un articolo per vedere tutte le sue vendite.</p></div>';
   }
   h+='<div class="sec"><div class="sec-h"><h2>Ordini</h2></div>';
   if(!S.orders.length)h+='<div class="card"><div class="empty">Nessun ordine.<br>Registra il primo ordine dal fornitore.</div></div>';
@@ -879,8 +880,8 @@ function vBiz(){
   });
   h+='</div>';
 
-  var sales=S.sales.slice().sort(byDateDesc).slice(0,12);
-  h+='<div class="sec"><div class="sec-h"><h2>Ultime vendite</h2>'+
+  var sales=S.sales.slice().sort(byDateDesc);
+  h+='<div class="sec"><div class="sec-h"><h2>Vendite'+(sales.length?' &middot; '+sales.length:'')+'</h2>'+
      (stockPieces()?'<button class="link" data-sheet="sale">+ Vendita</button>':'')+'</div><div class="card tight">'+
      (sales.length?sales.map(function(x){
         var o=find(S.orders,x.oid),it=o?find(o.items,x.iid):null;
@@ -1304,13 +1305,15 @@ function sheetOrderDetail(id){
        '<div class="kv"><span>Da dare al socio</span><b class="warn">'+eur(socio)+'</b></div>':'')+
      '</div>'+
      (oSocio(o)?'<div class="note" style="margin-top:9px">La roba resta tutta a te: quando vendi incassi tutto, e al socio spetta la sua parte. Quando lo paghi, registra l\'uscita come una spesa normale.</div>':'');
-  h+='<h4 class="sub">Articoli</h4><div class="card">'+o.items.map(function(it){
+  h+='<h4 class="sub">Articoli</h4>'+
+   '<p class="tile-s" style="margin:-4px 0 10px">Tocca un articolo per vedere tutte le sue vendite. La freccia registra una vendita.</p>'+
+   '<div class="card">'+o.items.map(function(it){
     var left=leftQty(o,it);
-    return '<div class="row" style="cursor:default"><div class="row-i">'+left+'</div>'+
+    return '<button class="row" data-itemsales="'+o.id+'|'+it.id+'"><div class="row-i">'+left+'</div>'+
      '<div class="row-m"><b>'+esc(it.name)+'</b><span>venduti '+soldQty(o.id,it.id)+' su '+it.qty+
       ' · restano '+left+'</span></div>'+
-     (left>0?'<button class="mini" data-sell="'+o.id+'|'+it.id+'" style="width:34px">›</button>':
-      '<span class="pill ok">finito</span>')+'</div>';
+     (left>0?'<span class="mini" data-sell="'+o.id+'|'+it.id+'" style="width:34px">›</span>':
+      '<span class="pill ok">finito</span>')+'</button>';
   }).join("")+'</div>';
   if(oOpen(o)){
     h+='<h4 class="sub">Spedizione per l\'Italia</h4><div class="card">'+
@@ -1404,6 +1407,37 @@ function sheetOrderEdit(id){
     }
     save();closeSheet();render();toast("Ordine aggiornato");
   });
+}
+
+/* ---- tutte le vendite di un articolo ---- */
+function sheetVendite(nome,sotto,lista,pre,tornaOrdine){
+  var v=lista.slice().sort(byDateDesc);
+  var pezzi=v.reduce(function(t,x){return t+x.qty;},0);
+  var incasso=v.reduce(function(t,x){return t+x.price;},0);
+  var prof=v.reduce(function(t,x){return t+saleProfit(x);},0);
+  var soc=v.reduce(function(t,x){return t+saleSocio(x);},0);
+  var h='<h3>'+esc(nome)+'</h3><p class="hint">'+sotto+'</p>';
+  h+='<div class="card">'+
+    '<div class="kv"><span>Pezzi venduti</span><b>'+pezzi+'</b></div>'+
+    '<div class="kv"><span>Incassato in tutto</span><b class="pos">'+eur(incasso)+'</b></div>'+
+    (soc>0.005?'<div class="kv"><span>Di cui spetta al socio</span><b class="warn">'+eur(soc)+'</b></div>':'')+
+    '<div class="kv top"><span>Il tuo guadagno</span><b class="'+(prof>=0?"pos":"neg")+'">'+eur(prof,true)+'</b></div>'+
+    '</div>';
+  if(pre)h+='<div style="margin-top:12px"><button class="btn" data-sell="'+pre+'">Registra una vendita</button></div>';
+  h+='<h4 class="sub">'+(v.length?v.length+(v.length===1?' vendita':' vendite'):'Nessuna vendita')+'</h4>'+
+   '<div class="card tight">'+(v.length?v.map(function(x){
+      var dove=walletName(x.wallet);
+      return '<button class="row" data-del-sale="'+x.id+'">'+
+       '<div class="row-i" style="background:var(--pos-soft)">'+ICO(I.bag,"var(--pos)",17)+'</div>'+
+       '<div class="row-m"><b>'+dmy(x.date)+(x.qty>1?' &middot; '+x.qty+' pezzi':'')+'</b>'+
+       '<span>'+esc(x.channel)+(dove!==x.channel?' &middot; '+esc(dove):'')+'</span></div>'+
+       '<div class="row-r"><div class="row-a pos">'+eur(x.price,true)+'</div>'+
+       '<span style="font-size:11.5px;color:var(--tx-3);white-space:nowrap">guadagno '+
+         eur(saleProfit(x),true)+'</span></div></button>';
+    }).join(""):'<div class="empty">Questo articolo non l\'hai ancora venduto.</div>')+'</div>';
+  if(v.length)h+='<p class="tile-s" style="margin-top:9px">Tocca una vendita per eliminarla.</p>';
+  if(tornaOrdine)h+='<div style="margin-top:14px"><button class="btn ghost" data-order="'+tornaOrdine+'">Torna all\'ordine</button></div>';
+  openSheet(h);
 }
 
 /* ---- vendita ---- */
@@ -1782,6 +1816,29 @@ document.addEventListener("click",function(e){
     setTimeout(function(){sheetOrderEdit(oid2);},280);return;}
   var od=t.closest("[data-order]");if(od)return sheetOrderDetail(od.getAttribute("data-order"));
   var sl=t.closest("[data-sell]");if(sl){closeSheet();setTimeout(function(){sheetSale(sl.getAttribute("data-sell"));},280);return;}
+  var isl=t.closest("[data-itemsales]");
+  if(isl){
+    var kk=isl.getAttribute("data-itemsales").split("|");
+    var oo=find(S.orders,kk[0]);if(!oo)return;
+    var iit=find(oo.items,kk[1]);if(!iit)return;
+    var lf=leftQty(oo,iit);
+    sheetVendite(iit.name,
+      esc(oo.name)+' &middot; venduti '+soldQty(oo.id,iit.id)+' su '+iit.qty+', restano '+lf,
+      S.sales.filter(function(x){return x.oid===oo.id&&x.iid===iit.id;}),
+      lf>0?(oo.id+"|"+iit.id):null, oo.id);
+    return;
+  }
+  var stn=t.closest("[data-stockname]");
+  if(stn){
+    var nome=stn.getAttribute("data-stockname"),lista=[],disp=[],rest=0;
+    S.orders.forEach(function(oo){oo.items.forEach(function(iit){
+      if(iit.name.trim()!==nome)return;
+      var l=leftQty(oo,iit); rest+=l; if(l>0)disp.push(oo.id+"|"+iit.id);
+      S.sales.forEach(function(x){if(x.oid===oo.id&&x.iid===iit.id)lista.push(x);});
+    });});
+    sheetVendite(nome,'In magazzino ne restano '+rest,lista,disp.length===1?disp[0]:null,null);
+    return;
+  }
   var py=t.closest("[data-pay]");if(py)return sheetPay(py.getAttribute("data-pay"));
   var rp=t.closest("[data-repay]");if(rp)return sheetRepay(rp.getAttribute("data-repay"));
 
@@ -1826,7 +1883,7 @@ document.addEventListener("click",function(e){
     var sid=ds.getAttribute("data-del-sale");
     ask("Eliminare la vendita?","Il pezzo torna in magazzino e l'incasso viene tolto.","Elimina",function(){
       S.sales=S.sales.filter(function(x){return x.id!==sid;});unpost("sale:"+sid);
-      save();render();toast("Vendita eliminata");
+      save();closeSheet();render();toast("Vendita eliminata");
     });
     return;
   }
