@@ -40,16 +40,37 @@ S = {
 }
 ```
 
-**Portafogli**: `contanti`, `conto`, `vinted`, `risparmi`. In più il valore
-speciale `nessuno`, che significa "questo movimento è successo ma non tocca i
-miei soldi" (usato per il gioco fatto prima di avere l'app e per gli ordini già
-pagati altrove).
+**Conti e gruppi.** I **gruppi** sono fissi nel codice (`GRUPPI`): `conto`,
+`contanti`, `vinted`, `risparmi`. Sono le quattro tessere che si vedono in home.
+I **conti** stanno in `S.conti` (`{id, nome, gruppo}`) e li gestisce Carmelo da
+Impostazioni: può avere più banche dentro `conto`, e in home ne vede la somma.
+Il valore speciale `nessuno` significa "questo movimento è successo ma non tocca
+i miei soldi" (il gioco fatto prima dell'app, gli ordini già pagati altrove) e
+non è un conto: non deve mai finire in `S.conti`.
 
-Se un giorno servisse un'altra piattaforma (Wallapop e simili) si aggiunge allo
-stesso modo: `walletName`, le due `walletSel*`, `balanceAt`, e le tessere in
-`vHome` e `vMov`. Sono cinque punti, non ce ne sono altri — ma **`balanceAt` è
-quello che si dimentica**, e se lo dimentichi i grafici ignorano quel
-portafoglio mentre i totali del mese no.
+Su ogni riga del registro `w` è l'**id di un conto**, non del gruppo. Gli id di
+partenza sono `contanti`, `conto`, `vinted`, `risparmi`, gli stessi di sempre:
+per questo i dati vecchi continuano a funzionare senza toccare niente, e
+rinominare "Conto" in "Revolut" lascia tutta la storia attaccata dov'era.
+
+Una tessera in home apre il dettaglio dei conti (`sheetGruppo`) se il gruppo ne
+ha più di uno, altrimenti porta dritta alla correzione saldo. `saldoGruppo(g)`
+somma i conti del gruppo; `liquid()` è contanti + conto.
+
+**`balanceAt` non elenca più i portafogli a mano**: conta tutto tranne
+`nessuno`. Era il punto che ci si dimenticava ogni volta che si aggiungeva un
+portafoglio, e faceva ignorare quei soldi ai grafici mentre i totali del mese
+li contavano.
+
+`normalize()` fa da rete: scarta i conti senza id, i doppioni (altrimenti i
+saldi si conterebbero due volte) e l'id riservato `nessuno`, rimette il gruppo
+a `conto` se è inventato, e soprattutto **ricrea qualsiasi conto citato da un
+movimento ma sparito dall'elenco**, così quei soldi non spariscono dai totali.
+
+Un conto si può togliere solo se non è usato da niente — e "usato" vuol dire
+anche ordini, vendite, gioco e prestiti, non solo righe del registro
+(`usiDelConto`). Il numero mostrato nell'elenco è invece `movimentiDi`, cioè i
+movimenti veri, perché quello è il nome che legge lui.
 
 **`ref`** collega una riga del registro alla sua origine: `order:<id>`,
 `order2:<id>`, `sale:<id>`, `play:<id>`, `giro:<uid>`, `rata:<debtId>:<importo>`,

@@ -247,7 +247,21 @@ h4.sub{font-size:14px;font-weight:600;color:var(--tx);margin:22px 0 10px}
 var KEY="cb29economy.v1";
 var CATS=["Vestiti","Fornitori cinesi","Casa","Regali","Cura personale","Cibo","Abbonamenti","Altro"];
 var CATS_IN=["Vendita","Promo","Regalo","Paghetta","Rimborso","Altro"];
-var blank={v:1,ledger:[],orders:[],sales:[],promos:[],play:[],debts:[],loans:[],bk:0};
+/* I GRUPPI sono fissi: sono le quattro tessere che si vedono in home.
+   I CONTI stanno dentro un gruppo e li gestisce lui da Impostazioni: puo' avere
+   piu' banche dentro "Conto" e in home ne vede la somma. */
+var GRUPPI=[
+ {k:"conto",   n:"Conto",   s:"digitale",      ico:"card", col:"var(--acc)", bg:"var(--acc-soft)",      spendibile:true},
+ {k:"contanti",n:"Contanti",s:"in camera",     ico:"cash", col:"#C6CBD5",    bg:"rgba(198,203,213,.10)",spendibile:true},
+ {k:"vinted",  n:"Vinted",  s:"da trasferire", ico:"bag",  col:"var(--warn)",bg:"var(--warn-soft)",     spendibile:false},
+ {k:"risparmi",n:"Risparmi",s:"da parte",      ico:"piggy",col:"var(--pos)", bg:"var(--pos-soft)",      spendibile:false}
+];
+var CONTI_BASE=[{id:"contanti",nome:"Contanti",gruppo:"contanti"},
+                {id:"conto",   nome:"Conto",   gruppo:"conto"},
+                {id:"vinted",  nome:"Vinted",  gruppo:"vinted"},
+                {id:"risparmi",nome:"Risparmi",gruppo:"risparmi"}];
+var blank={v:1,ledger:[],orders:[],sales:[],promos:[],play:[],debts:[],loans:[],
+           conti:JSON.parse(JSON.stringify(CONTI_BASE)),bk:0};
 var S=load();
 
 /* rimette a posto i dati letti da fuori: all'avvio e quando ripristina un backup.
@@ -262,6 +276,25 @@ function normalize(d){
       o.total=g+(parseFloat(o.ship1)||0);
     }
     o.items.forEach(function(i){i.qty=Math.round(i.qty)||0;});
+  });
+  /* i conti: se mancano li rimetto, e soprattutto non lascio mai un movimento
+     senza il suo conto, altrimenti quei soldi sparirebbero dai totali */
+  if(!Array.isArray(d.conti)||!d.conti.length)d.conti=JSON.parse(JSON.stringify(CONTI_BASE));
+  /* niente doppioni e niente id riservati, o i saldi verrebbero contati due volte */
+  var gia={};
+  d.conti=d.conti.filter(function(c){
+    if(!c||!c.id||c.id==="nessuno"||gia[c.id])return false;
+    gia[c.id]=1;return true;});
+  if(!d.conti.length)d.conti=JSON.parse(JSON.stringify(CONTI_BASE));
+  var gruppiOk={};GRUPPI.forEach(function(g){gruppiOk[g.k]=1;});
+  d.conti.forEach(function(c){c.nome=String(c.nome||c.id);if(!gruppiOk[c.gruppo])c.gruppo="conto";});
+  var visti={};d.conti.forEach(function(c){visti[c.id]=1;});
+  d.ledger.forEach(function(e){
+    if(e.w&&e.w!=="nessuno"&&!visti[e.w]){
+      var base=null;CONTI_BASE.forEach(function(b){if(b.id===e.w)base=b;});
+      d.conti.push({id:e.w,nome:base?base.nome:e.w,gruppo:base?base.gruppo:"conto"});
+      visti[e.w]=1;
+    }
   });
   d.sales=d.sales.filter(function(x){
     var o=null,i;for(i=0;i<d.orders.length;i++)if(d.orders[i].id===x.oid)o=d.orders[i];
@@ -418,16 +451,34 @@ function catBreakdown(m){
   });
   return Object.keys(map).map(function(k){return {k:k,v:map[k]};}).sort(function(a,b){return b.v-a.v;});
 }
-function liquid(){return c2(balance("contanti")+balance("conto"));}   /* quello che puoi spendere adesso */
-function savings(){return balance("risparmi");}                   /* messi da parte */
+/* i conti di un gruppo, e quanto fanno in tutto */
+function contiDi(g){return S.conti.filter(function(c){return c.gruppo===g;});}
+function saldoGruppo(g){return c2(contiDi(g).reduce(function(t,c){return t+balance(c.id);},0));}
+function trovaConto(id){for(var i=0;i<S.conti.length;i++)if(S.conti[i].id===id)return S.conti[i];return null;}
+function gruppoDi(k){for(var i=0;i<GRUPPI.length;i++)if(GRUPPI[i].k===k)return GRUPPI[i];return null;}
+/* i movimenti veri di un conto, quelli che si vedono nei Movimenti */
+function movimentiDi(id){return S.ledger.filter(function(e){return e.w===id;}).length;}
+/* tutto quello che e' attaccato a un conto: serve per non farlo cancellare per sbaglio.
+   Conta anche ordini, vendite, gioco e prestiti, non solo le righe del registro. */
+function usiDelConto(id){
+  var n=0;
+  S.ledger.forEach(function(e){if(e.w===id)n++;});
+  S.orders.forEach(function(o){if(o.wallet===id||o.wallet2===id)n++;});
+  S.sales.forEach(function(x){if(x.wallet===id)n++;});
+  S.play.forEach(function(x){if(x.wallet===id)n++;});
+  S.loans.forEach(function(x){if(x.wallet===id)n++;});
+  return n;
+}
+function liquid(){return c2(saldoGruppo("contanti")+saldoGruppo("conto"));}   /* quello che puoi spendere adesso */
+function savings(){return saldoGruppo("risparmi");}               /* messi da parte */
 /* soldi gia' incassati ma fermi su una piattaforma (Vinted): sono suoi, pero'
    per spenderli deve prima trasferirseli, quindi stanno fuori dal numero grande */
-function daTrasferire(){return balance("vinted");}
+function daTrasferire(){return saldoGruppo("vinted");}
 /* quanti soldi avevi in tutto, su tutti i portafogli, fino a quella data:
    cosi spostare soldi tra i portafogli non risulta ne un guadagno ne una perdita */
 function balanceAt(dateStr){
   return c2(S.ledger.reduce(function(t,e){
-    return (e.d<=dateStr&&(e.w==="contanti"||e.w==="conto"||e.w==="vinted"||e.w==="risparmi"))?t+e.a:t;},0));
+    return (e.d<=dateStr&&e.w!=="nessuno")?t+e.a:t;},0));
 }
 function wealth(){return c2(liquid()+savings()+daTrasferire());}
 function firstMonth(){
@@ -644,14 +695,12 @@ function vHome(){
     '<button class="act-b" data-sheet="sale"><i>'+ICO(I.bag,"#C6CBD5",21)+'</i><span>Vendita</span></button>'+
     '</div>';
 
-  h+='<div class="sec"><div class="card tight">'+
-     walletRow("conto","Conto","digitale",I.card,"var(--acc)","var(--acc-soft)")+
-     walletRow("contanti","Contanti","in camera",I.cash,"#C6CBD5","rgba(198,203,213,.10)")+
-     (vin!==0?
-       walletRow("vinted","Vinted","da trasferire",I.bag,"var(--warn)","var(--warn-soft)"):'')+
-     (sav>0||balance("risparmi")!==0?
-       walletRow("risparmi","Risparmi","da parte",I.piggy,"var(--pos)","var(--pos-soft)"):'')+
-     '</div></div>';
+  h+='<div class="sec"><div class="card tight">'+GRUPPI.map(function(g){
+       var quanti=contiDi(g.k).length,saldo=saldoGruppo(g.k);
+       if(!quanti)return '';
+       if((g.k==="vinted"||g.k==="risparmi")&&saldo===0&&quanti===1)return '';
+       return walletRow(g,quanti,saldo);
+     }).join("")+'</div></div>';
 
   var nuovi=records()-num(S.bk);
   if(nuovi>=20)
@@ -680,17 +729,21 @@ function vHome(){
       '<b style="font-size:15px">Si parte da qui</b>'+
       '<p class="hint" style="margin:6px 0 14px">Scrivi quanti soldi hai adesso, poi registra le cose man mano che succedono.</p>'+
       '<div style="display:flex;gap:9px">'+
-      '<button class="btn ghost" data-adj="contanti" style="padding:12px">Contanti</button>'+
-      '<button class="btn ghost" data-adj="conto" style="padding:12px">Conto</button>'+
+      '<button class="btn ghost" data-adj="'+primoDi("contanti")+'" style="padding:12px">Contanti</button>'+
+      '<button class="btn ghost" data-adj="'+primoDi("conto")+'" style="padding:12px">Conto</button>'+
       '</div></div></div>';
   }
   return h;
 }
-function walletRow(w,name,sub,icon,col,bg){
-  return '<button class="row" data-adj="'+w+'">'+
-    '<div class="row-i" style="background:'+bg+'">'+ICO(icon,col,18)+'</div>'+
-    '<div class="row-m"><b>'+name+'</b><span>'+sub+'</span></div>'+
-    '<div class="row-a '+(balance(w)<0?"neg":"")+'">'+eur(balance(w))+'</div></button>';
+/* una tessera per gruppo. Se il gruppo ha piu' di un conto la tessera mostra la
+   somma e apre l'elenco; se ne ha uno solo porta dritto alla correzione saldo */
+function walletRow(g,quanti,saldo){
+  var dett=quanti>1;
+  return '<button class="row" '+(dett?'data-gruppo="'+g.k+'"':'data-adj="'+primoDi(g.k)+'"')+'>'+
+    '<div class="row-i" style="background:'+g.bg+'">'+ICO(I[g.ico],g.col,18)+'</div>'+
+    '<div class="row-m"><b>'+g.n+'</b><span>'+(dett?quanti+' conti':g.s)+'</span></div>'+
+    '<div class="row-a '+(saldo<0?"neg":"")+'">'+eur(saldo)+'</div>'+
+    (dett?ICO(I.chev,"#4A5160",15):'')+'</button>';
 }
 function watchRow(target,color,label,value,cls){
   return '<button class="card" data-go="'+target+'" style="display:flex;align-items:center;gap:12px;'+
@@ -725,17 +778,18 @@ function ledRow(e){
    '<div class="row-a '+(e.a<0?"":"pos")+'">'+eur(e.a,true)+'</div></button>';
 }
 function walletName(w){
-  return {contanti:"Contanti",conto:"Conto",vinted:"Vinted",risparmi:"Risparmi",nessuno:"storico"}[w]||w;
+  if(w==="nessuno")return "storico";
+  var c=trovaConto(w);
+  return c?c.nome:({contanti:"Contanti",conto:"Conto",vinted:"Vinted",risparmi:"Risparmi"}[w]||w);
 }
 
 /* ---------- MOVIMENTI ---------- */
 function vMov(){
   var h=header("Movimenti",gearBtn());
-  var vin=daTrasferire();
-  h+='<div class="sec" style="margin-top:4px"><div class="'+(vin!==0?"grid2":"grid3")+'">'+
-     movWallet("conto","Conto")+movWallet("contanti","Contanti")+
-     (vin!==0?movWallet("vinted","Vinted"):'')+movWallet("risparmi","Risparmi")+
-     '</div></div>';
+  var mostra=GRUPPI.filter(function(g){
+    return contiDi(g.k).length && !(g.k==="vinted"&&saldoGruppo("vinted")===0);});
+  h+='<div class="sec" style="margin-top:4px"><div class="'+(mostra.length>3?"grid2":"grid3")+'">'+
+     mostra.map(function(g){return movWallet(g);}).join("")+'</div></div>';
   h+='<div class="sec"><div class="f2" style="grid-template-columns:1fr 132px">'+
      '<input class="fi" id="mq" placeholder="Cerca un movimento" value="'+esc(MQ)+'">'+
      '<select class="fi" id="mcat"><option value="">Tutte</option>'+
@@ -745,9 +799,11 @@ function vMov(){
   h+='<div id="movList">'+movList()+'</div>';
   return h;
 }
-function movWallet(w,name){
-  return '<button class="stat" data-adj="'+w+'"><div class="t">'+name+'</div>'+
-    '<div class="v '+(balance(w)<0?"neg":"")+'" style="font-size:18px">'+eur0(balance(w))+'</div></button>';
+function movWallet(g){
+  var saldo=saldoGruppo(g.k),dett=contiDi(g.k).length>1;
+  return '<button class="stat" '+(dett?'data-gruppo="'+g.k+'"':'data-adj="'+primoDi(g.k)+'"')+'>'+
+    '<div class="t">'+g.n+'</div>'+
+    '<div class="v '+(saldo<0?"neg":"")+'" style="font-size:18px">'+eur0(saldo)+'</div></button>';
 }
 function movMatch(e){
   var q=MQ.trim().toLowerCase();
@@ -1065,6 +1121,11 @@ function vBackup(){
      '<div class="card"><label class="fl">Incolla qui un backup</label>'+
      '<textarea class="fi" id="bkIn" placeholder="Incolla il testo del backup..."></textarea>'+
      '<button class="btn ghost" id="bkRestore" style="margin-top:12px">Ripristina questi dati</button></div></div>';
+  h+='<div class="sec"><div class="sec-h"><h2>I tuoi conti</h2></div>'+
+     '<div class="card"><p class="hint" style="margin:0 0 14px">'+
+     S.conti.length+(S.conti.length===1?' conto':' conti')+': '+
+     esc(S.conti.map(function(c){return c.nome;}).join(", "))+
+     '</p><button class="btn ghost" data-sheet="conti">Aggiungi o rinomina un conto</button></div></div>';
   h+='<div class="sec"><div class="sec-h"><h2>Codice di apertura</h2></div>'+
      '<div class="card"><p class="hint" style="margin:0 0 14px">'+
      (S.pin?"Attivo: l\'app chiede il codice a ogni apertura.":"Nessun codice: l\'app si apre subito.")+
@@ -1092,17 +1153,25 @@ function closeSheet(){
 }
 function walletSelN(id,def,testo){
   return '<select class="fi" id="'+id+'">'+
-   ["contanti","conto","vinted","risparmi"].map(function(w){
-     return '<option value="'+w+'"'+(def===w?" selected":"")+'>'+walletName(w)+'</option>';}).join("")+
+   contiOrdinati().map(function(c){
+     return '<option value="'+c.id+'"'+(def===c.id?" selected":"")+'>'+esc(c.nome)+'</option>';}).join("")+
    '<option value="nessuno"'+(def==="nessuno"?" selected":"")+'>'+
      (testo||"Nessuno — non toccare i soldi")+'</option></select>';
 }
 function walletSel(id,def){
   return '<select class="fi" id="'+id+'">'+
-   ["contanti","conto","vinted","risparmi"].map(function(w){
-     return '<option value="'+w+'"'+(def===w?" selected":"")+'>'+walletName(w)+'</option>';}).join("")+
+   contiOrdinati().map(function(c){
+     return '<option value="'+c.id+'"'+(def===c.id?" selected":"")+'>'+esc(c.nome)+'</option>';}).join("")+
    '</select>';
 }
+/* i conti nell'ordine delle tessere in home */
+function contiOrdinati(){
+  var out=[];GRUPPI.forEach(function(g){out=out.concat(contiDi(g.k));});
+  S.conti.forEach(function(c){if(out.indexOf(c)<0)out.push(c);});
+  return out;
+}
+/* il primo conto di un gruppo, per i valori di partenza dei moduli */
+function primoDi(g){var l=contiDi(g);return l.length?l[0].id:(S.conti[0]?S.conti[0].id:"conto");}
 function dateIn(id){return '<input class="fi" type="date" id="'+id+'" value="'+today()+'">';}
 function vd(id){return v(id)||today();}
 function v(id){var e=document.getElementById(id);return e?e.value:"";}
@@ -1137,7 +1206,7 @@ function sheetFlow(kind){
     '<div><label class="fl">Descrizione</label><input class="fi" id="f_lab" placeholder="'+(isOut?"es. tuta Adidas":"es. regalo nonna")+'"></div>'+
     '<div class="f2"><div><label class="fl">Categoria</label><select class="fi" id="f_cat">'+
       (isOut?CATS:CATS_IN).map(function(c){return '<option>'+c+'</option>';}).join("")+'</select></div>'+
-     '<div><label class="fl">Portafoglio</label>'+walletSel("f_w","contanti")+'</div></div>'+
+     '<div><label class="fl">Portafoglio</label>'+walletSel("f_w",primoDi("contanti"))+'</div></div>'+
     '<div><label class="fl">Data</label>'+dateIn("f_d")+'</div>'+
     '<p class="err" id="f_err" hidden></p>'+
     '<button class="btn" id="f_go">Registra</button></div>');
@@ -1155,8 +1224,8 @@ function showErr(id,m){var e=document.getElementById(id);if(e){e.textContent=m;e
 function sheetGiro(){
   openSheet('<h3>Giro di soldi</h3><p class="hint">Sposti soldi da un portafoglio all\'altro, per esempio da Vinted al conto. Il totale non cambia, cambia solo dove stanno.</p>'+
    '<div class="f"><div class="f2">'+
-    '<div><label class="fl">Da</label>'+walletSel("t_from",daTrasferire()>0?"vinted":"conto")+'</div>'+
-    '<div><label class="fl">A</label>'+walletSel("t_to",daTrasferire()>0?"conto":"risparmi")+'</div></div>'+
+    '<div><label class="fl">Da</label>'+walletSel("t_from",daTrasferire()>0?primoDi("vinted"):primoDi("conto"))+'</div>'+
+    '<div><label class="fl">A</label>'+walletSel("t_to",daTrasferire()>0?primoDi("conto"):primoDi("risparmi"))+'</div></div>'+
    '<div><label class="fl">Importo</label>'+
     '<input class="fi mono" id="t_amt" inputmode="decimal" placeholder="0,00"></div>'+
    '<div><label class="fl">Data</label>'+dateIn("t_d")+'</div>'+
@@ -1173,10 +1242,81 @@ function sheetGiro(){
   });
 }
 
+/* ---- i tuoi conti: aggiungi, rinomina, togli ---- */
+function sheetConti(){
+  var h='<h3>I tuoi conti</h3>'+
+   '<p class="hint">Puoi avere pi&ugrave; banche dentro <b>Conto</b>: in home vedi la somma, e toccandola vedi quanto c\'&egrave; su ognuna.</p>';
+  GRUPPI.forEach(function(g){
+    var l=contiDi(g.k);
+    h+='<h4 class="sub">'+g.n+'</h4><div class="card tight">'+
+      (l.length?l.map(function(c){
+        var n=movimentiDi(c.id);
+        return '<button class="row" data-conto="'+c.id+'">'+
+         '<div class="row-i" style="background:'+g.bg+'">'+ICO(I[g.ico],g.col,18)+'</div>'+
+         '<div class="row-m"><b>'+esc(c.nome)+'</b><span>'+
+           (n?n+(n===1?' movimento':' movimenti'):'nessun movimento')+' &middot; '+eur(balance(c.id))+'</span></div>'+
+         ICO(I.chev,"#4A5160",15)+'</button>';
+      }).join(""):'<div class="empty">Nessun conto qui.</div>')+'</div>'+
+      '<button class="btn ghost" data-nuovoconto="'+g.k+'" style="padding:11px;margin-top:8px">+ Aggiungi in '+g.n+'</button>';
+  });
+  h+='<div class="note" style="margin-top:16px">Rinominare un conto non tocca niente: i movimenti gi&agrave; registrati restano attaccati a quel conto e cambia solo il nome che leggi.</div>';
+  openSheet(h);
+}
+function sheetConto(id){
+  var c=trovaConto(id);if(!c)return;
+  var n=movimentiDi(id),usi=usiDelConto(id),g=gruppoDi(c.gruppo);
+  var h='<h3>'+esc(c.nome)+'</h3><p class="hint">In '+(g?g.n:c.gruppo)+' &middot; saldo '+eur(balance(id))+'</p>'+
+   '<div class="f"><div><label class="fl">Come si chiama</label>'+
+   '<input class="fi" id="cn_nome" value="'+esc(c.nome)+'"></div>'+
+   '<p class="err" id="cn_err" hidden></p>'+
+   '<button class="btn" id="cn_go">Salva il nome</button>'+
+   (usi?'<div class="note">'+(n?'Ha '+n+(n===1?' movimento':' movimenti'):'&Egrave; usato da qualcosa')+
+        ', quindi non si pu&ograve; togliere. Se non lo usi pi&ugrave;, lascialo dov\'&egrave;: non d&agrave; fastidio.</div>'
+     :'<button class="btn danger" data-delconto="'+id+'">Togli questo conto</button>')+
+   '</div>';
+  openSheet(h);
+  bind("cn_go",function(){
+    var nome=v("cn_nome").trim();
+    if(!nome)return showErr("cn_err","Dai un nome al conto.");
+    c.nome=nome;save();closeSheet();render();toast("Nome cambiato");
+  });
+}
+function sheetNuovoConto(g){
+  var gr=gruppoDi(g);if(!gr)return;
+  openSheet('<h3>Nuovo conto in '+gr.n+'</h3>'+
+   '<p class="hint">Per esempio un\'altra banca. In home finisce dentro <b>'+gr.n+'</b>, sommato agli altri.</p>'+
+   '<div class="f"><div><label class="fl">Come si chiama</label>'+
+   '<input class="fi" id="nc_nome" placeholder="es. Revolut"></div>'+
+   '<p class="err" id="nc_err" hidden></p>'+
+   '<button class="btn" id="nc_go">Aggiungi</button></div>');
+  bind("nc_go",function(){
+    var nome=v("nc_nome").trim();
+    if(!nome)return showErr("nc_err","Dai un nome al conto.");
+    S.conti.push({id:uid(),nome:nome,gruppo:g});
+    save();closeSheet();render();toast("Conto aggiunto");
+  });
+}
+
+/* ---- i conti di un gruppo ---- */
+function sheetGruppo(k){
+  var g=gruppoDi(k);if(!g)return;
+  var h='<h3>'+g.n+'</h3><p class="hint">In tutto '+eur(saldoGruppo(k))+
+    '. Tocca un conto per correggerne il saldo.</p><div class="card tight">'+
+    contiDi(k).map(function(c){
+      var b=balance(c.id);
+      return '<button class="row" data-adj="'+c.id+'">'+
+       '<div class="row-i" style="background:'+g.bg+'">'+ICO(I[g.ico],g.col,18)+'</div>'+
+       '<div class="row-m"><b>'+esc(c.nome)+'</b></div>'+
+       '<div class="row-a '+(b<0?"neg":"")+'">'+eur(b)+'</div></button>';
+    }).join("")+'</div>'+
+    '<div style="margin-top:14px"><button class="btn ghost" data-sheet="conti">Gestisci i tuoi conti</button></div>';
+  openSheet(h);
+}
+
 /* ---- rettifica saldo ---- */
 function sheetAdjust(w){
   var cur=balance(w);
-  openSheet('<h3>Saldo '+walletName(w).toLowerCase()+'</h3><p class="hint">Adesso risulta '+eur(cur)+'. Scrivi quanto hai davvero e sistemo io la differenza.</p>'+
+  openSheet('<h3>Saldo '+esc(walletName(w)).toLowerCase()+'</h3><p class="hint">Adesso risulta '+eur(cur)+'. Scrivi quanto hai davvero e sistemo io la differenza.</p>'+
    '<div class="f"><div><label class="fl">Saldo reale</label>'+
    '<input class="fi mono" id="a_amt" inputmode="decimal" value="'+cur.toFixed(2).replace(".",",")+'"></div>'+
    '<button class="btn" id="a_go">Correggi</button></div>');
@@ -1196,7 +1336,7 @@ function sheetOrder(){
    '<div class="f">'+
     '<div><label class="fl">Nome ordine</label><input class="fi" id="o_name" placeholder="es. Ordine USFans agosto"></div>'+
     '<div class="f2"><div><label class="fl">Data</label>'+dateIn("o_d")+'</div>'+
-     '<div><label class="fl">Pagato da</label>'+walletSelN("o_w","conto","Nessuno — gi&agrave; pagato prima")+'</div></div>'+
+     '<div><label class="fl">Pagato da</label>'+walletSelN("o_w",primoDi("conto"),"Nessuno — gi&agrave; pagato prima")+'</div></div>'+
     '<div><label class="fl">Totale pagato al fornitore</label>'+
      '<input class="fi mono" id="o_s1" inputmode="decimal" placeholder="302,88">'+
      '<p class="tile-s" style="margin:7px 0 0">Merce + commissioni + spedizione fino al magazzino: il numero che ti esce dal sito.</p></div>'+
@@ -1323,7 +1463,7 @@ function sheetOrderDetail(id){
      (oSocio(o)?'<div class="note">In societ&agrave; al '+Math.round(oShare(o)*100)+
        '%: dal portafoglio esce solo la tua parte.</div>':'')+
      '<div class="f2"><div><label class="fl">Pagato da</label>'+
-       walletSelN("s2_w","conto","Nessuno — gi&agrave; pagata")+'</div>'+
+       walletSelN("s2_w",primoDi("conto"),"Nessuno — gi&agrave; pagata")+'</div>'+
       '<div><label class="fl">Quando</label>'+
        '<input class="fi" type="date" id="s2_d" value="'+esc(o.date)+'"></div></div>'+
      '<button class="btn" id="s2_go">Ho pagato la spedizione</button></div></div>';
@@ -1356,7 +1496,7 @@ function sheetOrderEdit(id){
    '<div class="f"><div><label class="fl">Nome</label>'+
    '<input class="fi" id="e_name" value="'+esc(o.name)+'"></div>'+
    '<div><label class="fl">Soldi presi da</label>'+
-    walletSelN("e_w",o.wallet||"conto","Nessuno — non toccare i soldi")+'</div>'+
+    walletSelN("e_w",o.wallet||primoDi("conto"),"Nessuno — non toccare i soldi")+'</div>'+
    '<div><label class="fl">La tua quota, in percentuale</label>'+
     '<input class="fi mono" id="e_q" inputmode="numeric" value="'+Math.round(oShare(o)*100)+'"></div>'+
    '<div class="f2"><div><label class="fl">Totale pagato</label>'+
@@ -1457,7 +1597,7 @@ function sheetSale(pre){
      '<input class="fi mono" id="v_p" inputmode="decimal" placeholder="0,00"></div></div>'+
    '<div class="f2"><div><label class="fl">Dove</label><select class="fi" id="v_c">'+
      '<option>Vinted</option><option>Wallapop</option><option>Di persona</option><option>Altro</option></select></div>'+
-    '<div><label class="fl">Incassato su</label>'+walletSel("v_w","vinted")+'</div></div>'+
+    '<div><label class="fl">Incassato su</label>'+walletSel("v_w",primoDi("vinted"))+'</div></div>'+
    '<div><label class="fl">Data</label>'+dateIn("v_d")+'</div>'+
    '<div class="note" id="v_prev">Scegli l\'articolo e il prezzo.</div>'+
    '<p class="err" id="v_err" hidden></p>'+
@@ -1505,11 +1645,8 @@ function sheetPlay(storico){
     '<button class="on" data-s="deposito">'+(storico?"Sono sotto":"Deposito")+'</button>'+
     '<button data-s="prelievo">'+(storico?"Sono sopra":"Prelievo")+'</button></div></div>'+
    '<div><label class="fl">Importo</label><input class="fi mono" id="g_a" inputmode="decimal" placeholder="0,00"></div>'+
-   '<div><label class="fl">Soldi presi da</label><select class="fi" id="g_w">'+
-    '<option value="conto"'+(storico?"":" selected")+'>Conto</option>'+
-    '<option value="contanti">Contanti</option>'+
-    '<option value="nessuno"'+(storico?" selected":"")+'>Nessuno — è già successo prima</option>'+
-    '</select>'+
+   '<div><label class="fl">Soldi presi da</label>'+
+    walletSelN("g_w",storico?"nessuno":primoDi("conto"),"Nessuno &mdash; &egrave; gi&agrave; successo prima")+
     '<p class="tile-s" style="margin:7px 0 0">Scegli <b>Nessuno</b> per i soldi giocati in passato: entrano nel saldo del gioco ma non toccano i tuoi portafogli.</p></div>'+
    '<div><label class="fl">Data</label>'+dateIn("g_d")+'</div>'+
    '<div><label class="fl">Nota</label><input class="fi" id="g_n" placeholder="es. Sisal"></div>'+
@@ -1551,7 +1688,7 @@ function sheetPay(id){
   openSheet('<h3>'+esc(d.name)+'</h3><p class="hint">Restano '+eur(num(d.left))+'.</p>'+
    '<div class="f"><div><label class="fl">Rata pagata</label>'+
    '<input class="fi mono" id="r_a" inputmode="decimal" placeholder="0,00"></div>'+
-   '<div><label class="fl">Pagata da</label>'+walletSel("r_w","conto")+'</div>'+
+   '<div><label class="fl">Pagata da</label>'+walletSel("r_w",primoDi("conto"))+'</div>'+
    '<button class="btn" id="r_go">Registra pagamento</button></div>');
   bind("r_go",function(){
     var a=num(v("r_a"));if(a<=0)return fail("Metti l'importo della rata");
@@ -1575,7 +1712,7 @@ function sheetLoan(){
    '<div><label class="fl">Quanto</label>'+
     '<input class="fi mono" id="l_a" inputmode="decimal" placeholder="0,00"></div>'+
    '<div id="l_wbox"><label class="fl">Presi da</label>'+
-    walletSelN("l_w","conto","Nessuno &mdash; glieli avevo gi&agrave; dati")+'</div>'+
+    walletSelN("l_w",primoDi("conto"),"Nessuno &mdash; glieli avevo gi&agrave; dati")+'</div>'+
    '<div><label class="fl">Da quando</label>'+dateIn("l_d")+'</div>'+
    '<div><label class="fl">Nota</label><input class="fi" id="l_note" placeholder="es. per la macchina"></div>'+
    '<div class="note" id="l_note2"></div>'+
@@ -1613,7 +1750,7 @@ function sheetRepay(id){
    (arr?'Devono ancora arrivarti ':'Ti deve ancora ')+eur(num(l.left))+'.</p>'+
    '<div class="f"><div><label class="fl">'+(arr?"Quanto ti \u00e8 arrivato":"Quanto ti ha restituito")+'</label>'+
    '<input class="fi mono" id="q_a" inputmode="decimal" value="'+String(num(l.left).toFixed(2)).replace(".",",")+'"></div>'+
-   '<div><label class="fl">Dove li hai messi</label>'+walletSel("q_w","conto")+'</div>'+
+   '<div><label class="fl">Dove li hai messi</label>'+walletSel("q_w",primoDi("conto"))+'</div>'+
    '<div><label class="fl">Quando</label>'+dateIn("q_d")+'</div>'+
    '<button class="btn" id="q_go">'+(arr?"Mi sono arrivati":"Me li ha dati")+'</button></div>');
   bind("q_go",function(){
@@ -1794,7 +1931,7 @@ document.getElementById("pad").addEventListener("click",function(e){
 document.getElementById("scrim").onclick=closeSheet;
 
 var SHEETS={menu:sheetAdd,spesa:function(){sheetFlow("spesa");},entrata:function(){sheetFlow("entrata");},
-  pin:sheetPin,giro:sheetGiro,order:sheetOrder,sale:function(){sheetSale();},loan:sheetLoan,
+  pin:sheetPin,giro:sheetGiro,order:sheetOrder,sale:function(){sheetSale();},loan:sheetLoan,conti:sheetConti,
   play:function(){sheetPlay(false);},storico:function(){sheetPlay(true);},debt:sheetDebt};
 
 document.addEventListener("click",function(e){
@@ -1803,6 +1940,21 @@ document.addEventListener("click",function(e){
   var g=t.closest("[data-go]");if(g)return go(g.getAttribute("data-go"));
   var sh=t.closest("[data-sheet]");if(sh){var f=SHEETS[sh.getAttribute("data-sheet")];if(f)f();return;}
   var adj=t.closest("[data-adj]");if(adj)return sheetAdjust(adj.getAttribute("data-adj"));
+  var grp=t.closest("[data-gruppo]");if(grp)return sheetGruppo(grp.getAttribute("data-gruppo"));
+  var cnt=t.closest("[data-conto]");if(cnt)return sheetConto(cnt.getAttribute("data-conto"));
+  var ncn=t.closest("[data-nuovoconto]");if(ncn)return sheetNuovoConto(ncn.getAttribute("data-nuovoconto"));
+  var dcn=t.closest("[data-delconto]");
+  if(dcn){
+    var cid=dcn.getAttribute("data-delconto"),cc=trovaConto(cid);
+    if(!cc)return;
+    if(usiDelConto(cid))return fail("Questo conto ha dei movimenti, non si pu\u00f2 togliere");
+    if(S.conti.length<2)return fail("Almeno un conto deve restare");
+    ask("Togliere "+cc.nome+"?","Non ha nessun movimento, quindi non si perde niente.","Togli",function(){
+      S.conti=S.conti.filter(function(x){return x.id!==cid;});
+      save();closeSheet();render();toast("Conto tolto");
+    });
+    return;
+  }
   var ar=t.closest("[data-arrived]");
   if(ar){var oa=find(S.orders,ar.getAttribute("data-arrived"));
     if(oa){oa.arrived=true;oa.arrivedDate=today();save();closeSheet();render();toast("Ordine arrivato");}
