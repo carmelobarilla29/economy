@@ -23,6 +23,14 @@ Vanilla JS, niente build, niente dipendenze, niente framework. Tutto in
 
 Font: Onest da Google Fonts. Grafici: SVG scritto a mano, nessuna libreria.
 
+**Design**: fondo avorio, testo verde scuro, saldo in una scheda verde e
+navigazione scura in basso. I portafogli in home sono schede a due colonne.
+Il logo geometrico in `icon.svg` compare nell'app e come favicon;
+`apple-touch-icon.png` (180 × 180, opaco) serve per l'icona sulla home iPhone.
+Sono immagini statiche, non dipendenze: l'app resta tutta in `index.html`.
+Se cambia il logo, aggiornare anche il PNG e la versione dei collegamenti
+nel `<head>`. Non usare un SVG incorporato come icona iPhone.
+
 ## Modello dei dati
 
 ```
